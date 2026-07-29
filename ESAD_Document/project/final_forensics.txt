@@ -1,0 +1,91 @@
+/Users/vivek/Luxery /ESAD_Document/project/api/src/server.ts:  console.error('Failed to start server:', err)
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Clearing old data...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding Brand...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding Vehicle...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding VehicleImages...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding VehicleHotspots...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding VehicleSpecConfigs...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding Journals...')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:  console.log('Seeding complete!')
+/Users/vivek/Luxery /ESAD_Document/project/api/prisma/seed.ts:    console.error(e)
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/bullmq.ts:    attempts: 3,
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/bullmq.ts:    attempts: 3,
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/redis.ts:redisClient.on('connect', () => console.log('Redis connected'))
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/redis.ts:redisClient.on('error',   (err) => console.error('Redis error:', err.message))
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/env.ts:  console.error('❌ Invalid environment variables:')
+/Users/vivek/Luxery /ESAD_Document/project/api/src/config/env.ts:  console.error(parsed.error.flatten().fieldErrors)
+/Users/vivek/Luxery /ESAD_Document/project/api/src/utils/slug.ts:export function makeSlugUnique(base: string, attempt: number): string {
+/Users/vivek/Luxery /ESAD_Document/project/api/src/utils/slug.ts:  return attempt === 0 ? base : `${base}-${attempt}`
+/Users/vivek/Luxery /ESAD_Document/project/api/src/middleware/rateLimit.middleware.ts:  legacyHeaders: false,
+/Users/vivek/Luxery /ESAD_Document/project/api/src/middleware/rateLimit.middleware.ts:  message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many login attempts. Try again in 15 minutes.' } },
+/Users/vivek/Luxery /ESAD_Document/project/api/src/routes/lead.routes.ts:      console.error('Failed to queue lead notification:', queueErr)
+/Users/vivek/Luxery /ESAD_Document/project/api/src/routes/lead.routes.ts:      console.error('Failed to queue sell car notification:', queueErr)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/lib/soundEngine.ts:    console.error("Supercar sound synthesis error:", err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/not-found.tsx:            The requested showroom resource could not be located. It may have been sold, relocated, or temporarily removed from the inventory.
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/blog/page.tsx:      .catch(err => console.error("Error fetching journals:", err))
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/layout.tsx:        url: '/og-image.jpg', // Placeholder for actual OG image
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:      console.error("Submission error:", err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="e.g. Ferrari"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-dark border ${errors.carMake ? 'border-red-500' : 'border-gold/20'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="e.g. 812 Superfast"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-dark border ${errors.carModel ? 'border-red-500' : 'border-gold/20'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="e.g. 4,500 km"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className="w-full px-4 py-3 rounded-xl bg-dark border border-gold/20 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="e.g. 1,450,000"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className="w-full px-4 py-3 rounded-xl bg-dark border border-gold/20 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="Owner Name"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-dark border ${errors.fullName ? 'border-red-500' : 'border-gold/20'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="owner@domain.com"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-dark border ${errors.email ? 'border-red-500' : 'border-gold/20'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  placeholder="+971 50 000 0000"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sell-your-car/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-dark border ${errors.phone ? 'border-red-500' : 'border-gold/20'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-gold`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/faq/page.tsx:      a: 'Yes, 100% of the motorcars listed in our catalog are physically stored and present in our temperature-controlled showroom in Dubai, UAE.',
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                  placeholder="Lord / Lady Name"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.fullName ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#C9A227]`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                    placeholder="name@domain.com"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                    className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.email ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#C9A227]`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                    placeholder="+971 50..."
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                    className="w-full px-4 py-3 rounded-xl bg-[#050505] border border-[rgba(255,255,255,0.1)] text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#C9A227]"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                  placeholder="How may our concierge assist you?"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/contact/page.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.message ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#C9A227]`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/page.tsx:        console.error(err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/page.tsx:        console.error(err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/about/AboutClient.tsx:            Our Legacy
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/error.tsx:    console.error('Global Error Boundary Caught:', error)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/error.tsx:            <span>Attempt Recovery</span>
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/sitemap.ts:    console.error('Failed to fetch vehicles for sitemap', error)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Hero.tsx:      console.error("Engine sound synthesis error:", e)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Hero.tsx:                  placeholder="e.g. Chiron, SF90, Revuelto"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Hero.tsx:                  className="w-full bg-[#0A0A0A]/80 border border-white/10 text-white text-sm rounded-xl px-5 py-4 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner placeholder:text-white/20"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          placeholder="Lord / Lady Name"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          placeholder="name@domain.com"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          placeholder="e.g. Ferrari, Pagani"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          placeholder="e.g. SF90 Spider"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          placeholder="+971 50 000 0000"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/QuickSellBanner.tsx:                          className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/chatbot/FaqChatbot.tsx:      .catch(err => console.error("Failed to load FAQs:", err))
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/chatbot/FaqChatbot.tsx:                  placeholder="Ask a question..."
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/chatbot/FaqChatbot.tsx:                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#111111] border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A227] text-xs"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/inventory/page.tsx:                placeholder="Make, model, or feature..."
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/inventory/page.tsx:                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227] transition-all"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Footer.tsx:      console.error(err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Footer.tsx:                    placeholder="Enter your email" 
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/Footer.tsx:                    className="flex-1 bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/30 transition-all shadow-inner"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/admin/page.tsx:      console.error(err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/admin/page.tsx:                className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] transition-colors"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/admin/page.tsx:                placeholder="Enter password (e.g. password123)"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/admin/page.tsx:                className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] transition-colors"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/ComparisonWidget.tsx:        console.error(err)
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                  placeholder="e.g. Lord Alexander Wright"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                  className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.fullName ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] text-sm`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                    placeholder="alex@domain.com"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                    className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.email ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] text-sm`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                    placeholder="+971 50 123 4567"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                    className={`w-full px-4 py-3 rounded-xl bg-[#050505] border ${errors.phone ? 'border-red-500' : 'border-[rgba(255,255,255,0.1)]'} text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] text-sm`}
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                  placeholder="Specify viewing date or export requirements..."
+/Users/vivek/Luxery /ESAD_Document/project/frontend/components/BookingModal.tsx:                  className="w-full px-4 py-3 rounded-xl bg-[#050505] border border-[rgba(255,255,255,0.1)] text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] text-sm"
+/Users/vivek/Luxery /ESAD_Document/project/frontend/app/admin/faqs/page.tsx:      console.error(err)

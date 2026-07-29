@@ -1,0 +1,397 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  viewer
+  editor
+  admin
+  super_admin
+
+  @@map("user_role")
+}
+
+enum VehicleStatus {
+  draft
+  published
+  unpublished
+  archived
+
+  @@map("vehicle_status")
+}
+
+enum VehicleSource {
+  cms
+  google_sheets
+
+  @@map("vehicle_source")
+}
+
+enum LeadType {
+  enquiry
+  booking
+  callback
+  sell_car
+
+  @@map("lead_type")
+}
+
+enum LeadStatus {
+  new
+  notified
+  notification_failed
+  contacted
+  qualified
+  converted
+  lost
+  follow_up
+
+  @@map("lead_status")
+}
+
+enum SellCarStatus {
+  new
+  reviewing
+  offer_made
+  accepted
+  rejected
+
+  @@map("sell_car_status")
+}
+
+enum SyncStatus {
+  running
+  completed
+  failed
+  partial
+
+  @@map("sync_status")
+}
+
+enum JobStatus {
+  pending
+  processing
+  completed
+  failed
+  dead_lettered
+
+  @@map("job_status")
+}
+
+enum MediaType {
+  image_exterior
+  image_interior
+  image_engine
+  image_dashboard
+  image_detail
+  video_walkaround
+  video_drone
+  video_360
+  document_inspection
+  document_history
+  audio_soundclip
+
+  @@map("media_type")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(255)
+  role         UserRole  @default(viewer)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login") @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  createdVehicles     Vehicle[]           @relation("VehicleCreatedBy")
+  updatedVehicles     Vehicle[]           @relation("VehicleUpdatedBy")
+  assignedLeads       Lead[]              @relation("LeadAssignedTo")
+  assignedSellCarSubs SellCarSubmission[] @relation("SellCarAssignedTo")
+  createdFaqs         Faq[]               @relation("FaqCreatedBy")
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model Brand {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  slug         String   @unique @db.VarChar(100)
+  logoUrl      String?  @map("logo_url") @db.VarChar(500)
+  description  String?  @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  vehicles Vehicle[]
+
+  @@map("brands")
+}
+
+model Vehicle {
+  id            String        @id @default(uuid()) @db.Uuid
+  brandId       String?       @map("brand_id") @db.Uuid
+  make          String        @db.VarChar(100)
+  model         String        @db.VarChar(100)
+  trim          String?       @db.VarChar(100)
+  year          Int
+  slug          String        @unique @db.VarChar(200)
+  price         Decimal       @db.Decimal(12, 2)
+  currency      String        @default("AED") @db.VarChar(10)
+  mileage       String?       @db.VarChar(50)
+  transmission  String?       @db.VarChar(50)
+  fuelType      String?       @map("fuel_type") @db.VarChar(50)
+  bodyType      String?       @map("body_type") @db.VarChar(50)
+  exteriorColor String?       @map("exterior_color") @db.VarChar(50)
+  interiorColor String?       @map("interior_color") @db.VarChar(50)
+  engine        String?       @db.VarChar(100)
+  doors         Int?          @default(4)
+  description   String?       @db.Text
+  specsJson     Json?         @map("specs_json")
+  status        VehicleStatus @default(draft)
+  isFeatured    Boolean       @default(false) @map("is_featured")
+  source        VehicleSource @default(cms)
+  sheetRowId    String?       @unique @map("sheet_row_id") @db.VarChar(100)
+  createdBy     String?       @map("created_by") @db.Uuid
+  updatedBy     String?       @map("updated_by") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz()
+
+  brand       Brand?              @relation(fields: [brandId], references: [id])
+  creator     User?               @relation("VehicleCreatedBy", fields: [createdBy], references: [id])
+  updater     User?               @relation("VehicleUpdatedBy", fields: [updatedBy], references: [id])
+  images      VehicleImage[]
+  leads       Lead[]
+  hotspots    VehicleHotspot[]
+  specConfigs VehicleSpecConfig[]
+
+  @@index([slug])
+  @@index([status, deletedAt])
+  @@index([brandId, status])
+  @@index([isFeatured, status])
+  @@index([make, model, year])
+  @@map("vehicles")
+}
+
+model VehicleImage {
+  id           String  @id @default(uuid()) @db.Uuid
+  vehicleId    String  @map("vehicle_id") @db.Uuid
+  urlOriginal  String  @map("url_original") @db.VarChar(500)
+  urlLg        String? @map("url_lg") @db.VarChar(500)
+  urlMd        String? @map("url_md") @db.VarChar(500)
+  urlSm        String? @map("url_sm") @db.VarChar(500)
+  isPrimary    Boolean @default(false) @map("is_primary")
+  displayOrder Int     @default(0) @map("display_order")
+
+  // Enterprise DAM Extensions
+  mediaType   MediaType @default(image_exterior) @map("media_type")
+  title       String?   @db.VarChar(255)
+  description String?   @db.Text
+  fileSize    Int?      @map("file_size")
+  mimeType    String?   @map("mime_type") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_images")
+}
+
+model VehicleHotspot {
+  id           String   @id @default(uuid()) @db.Uuid
+  vehicleId    String   @map("vehicle_id") @db.Uuid
+  title        String   @db.VarChar(100)
+  subtitle     String   @db.VarChar(100)
+  details      String   @db.Text
+  stat         String   @db.VarChar(100)
+  xPosition    Float    @map("x_position")
+  yPosition    Float    @map("y_position")
+  iconType     String   @map("icon_type") @db.VarChar(50)
+  partImageUrl String?  @map("part_image_url") @db.VarChar(500)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_hotspots")
+}
+
+model VehicleSpecConfig {
+  id           String   @id @default(uuid()) @db.Uuid
+  vehicleId    String   @map("vehicle_id") @db.Uuid
+  name         String   @db.VarChar(100)
+  hexColor     String   @map("hex_color") @db.VarChar(20)
+  imageUrl     String   @map("image_url") @db.VarChar(500)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_spec_configs")
+}
+
+model Lead {
+  id          String     @id @default(uuid()) @db.Uuid
+  vehicleId   String?    @map("vehicle_id") @db.Uuid
+  fullName    String     @map("full_name") @db.VarChar(255)
+  email       String     @db.VarChar(255)
+  phone       String     @db.VarChar(50)
+  countryCode String?    @default("+971") @map("country_code") @db.VarChar(10)
+  leadType    LeadType   @default(enquiry) @map("lead_type")
+  status      LeadStatus @default(new)
+  message     String?    @db.Text
+  utmSource   String?    @map("utm_source") @db.VarChar(100)
+  utmMedium   String?    @map("utm_medium") @db.VarChar(100)
+  utmCampaign String?    @map("utm_campaign") @db.VarChar(100)
+  metadata    Json?
+  assignedTo  String?    @map("assigned_to") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+
+  vehicle  Vehicle? @relation(fields: [vehicleId], references: [id])
+  assignee User?    @relation("LeadAssignedTo", fields: [assignedTo], references: [id])
+
+  @@map("leads")
+}
+
+model SellCarSubmission {
+  id          String        @id @default(uuid()) @db.Uuid
+  fullName    String        @map("full_name") @db.VarChar(255)
+  email       String        @db.VarChar(255)
+  phone       String        @db.VarChar(50)
+  carMake     String        @map("car_make") @db.VarChar(100)
+  carModel    String        @map("car_model") @db.VarChar(100)
+  carYear     Int           @map("car_year")
+  carMileage  String?       @map("car_mileage") @db.VarChar(50)
+  description String?       @db.Text
+  askingPrice String?       @map("asking_price") @db.VarChar(50)
+  imageUrls   Json?         @map("image_urls")
+  status      SellCarStatus @default(new)
+  assignedTo  String?       @map("assigned_to") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  assignee User? @relation("SellCarAssignedTo", fields: [assignedTo], references: [id])
+
+  @@map("sell_car_submissions")
+}
+
+model FaqCategory {
+  id           String   @id @default(uuid()) @db.Uuid
+  label        String   @db.VarChar(100)
+  slug         String   @unique @db.VarChar(100)
+  icon         String?  @db.VarChar(100)
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  faqs Faq[]
+
+  @@map("faq_categories")
+}
+
+model Faq {
+  id           String   @id @default(uuid()) @db.Uuid
+  categoryId   String?  @map("category_id") @db.Uuid
+  question     String   @db.Text
+  answer       String   @db.Text
+  keywords     Json?
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  category FaqCategory? @relation(fields: [categoryId], references: [id])
+  creator  User?        @relation("FaqCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("faqs")
+}
+
+model SyncLog {
+  id            String     @id @default(uuid()) @db.Uuid
+  startedAt     DateTime   @default(now()) @map("started_at") @db.Timestamptz()
+  completedAt   DateTime?  @map("completed_at") @db.Timestamptz()
+  rowsProcessed Int        @default(0) @map("rows_processed")
+  rowsInserted  Int        @default(0) @map("rows_inserted")
+  rowsUpdated   Int        @default(0) @map("rows_updated")
+  status        SyncStatus @default(running)
+  errorsJson    Json?      @map("errors_json")
+  triggeredBy   String     @default("cron") @map("triggered_by") @db.VarChar(50)
+
+  @@map("sync_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+enum SyncQuarantineStatus {
+  PENDING
+  RESOLVED
+  IGNORED
+
+  @@map("sync_quarantine_status")
+}
+
+enum JournalStatus {
+  DRAFT
+  PUBLISHED
+
+  @@map("journal_status")
+}
+
+model SyncQuarantine {
+  id               String               @id @default(uuid()) @db.Uuid
+  sheetRowId       String?              @map("sheet_row_id") @db.VarChar(100)
+  rawRowData       Json                 @map("raw_row_data")
+  validationErrors Json                 @map("validation_errors")
+  status           SyncQuarantineStatus @default(PENDING)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("sync_quarantines")
+}
+
+model Journal {
+  id          String        @id @default(uuid()) @db.Uuid
+  slug        String        @unique @db.VarChar(255)
+  title       String        @db.VarChar(255)
+  category    String        @db.VarChar(100)
+  snippet     String        @db.Text
+  content     String?       @db.Text
+  imageUrl    String        @map("image_url") @db.VarChar(500)
+  readTime    String        @map("read_time") @db.VarChar(50)
+  status      JournalStatus @default(DRAFT)
+  authorId    String?       @map("author_id") @db.Uuid
+  tags        String[]
+  publishedAt DateTime      @default(now()) @map("published_at") @db.Timestamptz()
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("journals")
+}

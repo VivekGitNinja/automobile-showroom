@@ -1,0 +1,12 @@
+aPiA
+<</Title (1. Vehicle Listings & Browsing: )
+<</Title (4. Automated Inventory Sync: )
+<</Title (5. Lead Capture & Storage: )
+<</Title (6. FAQ Chatbot \(Rule-Based, No LLM\): )
+<</Title (Scope & Requirements: )
+/CIDSystemInfo <</Registry (Adobe)
+/CIDSystemInfo <</Registry (Adobe)
+/CIDSystemInfo <</Registry (Adobe)
+/CIDSystemInfo <</Registry (Adobe)
+/CIDSystemInfo <</Registry (Adobe)
+/CIDSystemInfo <</Registry (Adobe)

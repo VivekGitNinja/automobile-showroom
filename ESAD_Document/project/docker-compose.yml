@@ -1,0 +1,151 @@
+version: "3.9"
+
+x-api-env: &api-env
+  DATABASE_URL: "postgresql://${DB_USER}:${DB_PASS}@postgres:5432/showroom?sslmode=disable"
+  REDIS_URL: "redis://:${REDIS_PASS}@redis:6379"
+  JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+  JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+  SENDGRID_API_KEY: "${SENDGRID_API_KEY}"
+  SALES_EMAIL: "${SALES_EMAIL}"
+  FROM_EMAIL: "${FROM_EMAIL}"
+  FROM_NAME: "${FROM_NAME}"
+  AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+  AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+  AWS_REGION: "${AWS_REGION}"
+  S3_BUCKET: "${S3_BUCKET}"
+  CDN_BASE_URL: "${CDN_BASE_URL}"
+  GOOGLE_SERVICE_ACCOUNT_JSON: "${GOOGLE_SERVICE_ACCOUNT_JSON}"
+  GOOGLE_SHEET_ID: "${GOOGLE_SHEET_ID}"
+  GOOGLE_SHEET_NAME: "${GOOGLE_SHEET_NAME}"
+  SYNC_CRON_SCHEDULE: "${SYNC_CRON_SCHEDULE}"
+  REVALIDATE_SECRET: "${REVALIDATE_SECRET}"
+  REVALIDATE_URL: "http://nextjs:3000/api/revalidate"
+  NODE_ENV: production
+  APP_VERSION: "${APP_VERSION}"
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - nextjs
+      - api
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nextjs:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
+      API_URL: "http://api:4000"
+      REVALIDATE_SECRET: "${REVALIDATE_SECRET}"
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "${NEXT_PUBLIC_WHATSAPP_NUMBER}"
+      NEXT_PUBLIC_SITE_URL: "${NEXT_PUBLIC_SITE_URL}"
+      NEXT_PUBLIC_SITE_NAME: "${NEXT_PUBLIC_SITE_NAME}"
+      NODE_ENV: production
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sync-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: ["node", "dist/workers/sync.worker.js"]
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  notif-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: ["node", "dist/workers/notification.worker.js"]
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      POSTGRES_DB: showroom
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASS}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d showroom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASS}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASS}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  default:
+    name: showroom_net
