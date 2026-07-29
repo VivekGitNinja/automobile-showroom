@@ -24,8 +24,12 @@ export function setupSwagger(app: Application) {
     servers: [{ url: '/api/v1' }],
   })
 
-  app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(document, {
+  const options = {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Luxury Showroom API Docs'
-  }))
+  }
+
+  app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(document, options))
+  app.get('/api/docs', (req, res) => res.redirect('/api/v1/docs'))
+  app.get('/docs', (req, res) => res.redirect('/api/v1/docs'))
 }

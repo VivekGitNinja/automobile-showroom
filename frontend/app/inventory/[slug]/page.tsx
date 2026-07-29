@@ -65,20 +65,44 @@ export default function VehicleDetailPage() {
 
   // Categorizing images with guaranteed fallback
   const rawImages = Array.isArray(vehicle.images) ? vehicle.images.filter(img => typeof img === 'string' && img.trim() !== '') : []
-  const allImages = rawImages.length > 0 ? rawImages : getFallbackImages(vehicle.make, vehicle.model)
+  const allImagesFallback = rawImages.length > 0 ? rawImages : getFallbackImages(vehicle.make, vehicle.model)
   
+  let exteriorImgs = allImagesFallback.slice(0, Math.ceil(allImagesFallback.length / 2))
+  let interiorImgs = allImagesFallback.slice(Math.ceil(allImagesFallback.length / 2))
+  let engineImgs = allImagesFallback.slice(-1)
+
+  const m = (vehicle?.make || '').toLowerCase()
+  if (m.includes('bugatti')) {
+    exteriorImgs = [
+      '/images/dynamic/bugatti_exterior.jpg',
+      '/images/dynamic/spec_blue.jpg',
+      '/images/dynamic/hotspot_aero.jpg'
+    ]
+    interiorImgs = [
+      '/images/dynamic/interior_dashboard_1785319238155.jpg',
+      '/images/dynamic/interior_seats_1785319256690.jpg',
+      '/images/dynamic/interior_steering_1785319277541.jpg',
+      '/images/dynamic/interior_headliner_1785319295000.jpg'
+    ]
+    engineImgs = [
+      '/images/dynamic/hotspot_engine.jpg'
+    ]
+  }
+
+  const allFilteredImages = [...Array.from(new Set([...exteriorImgs, ...interiorImgs, ...engineImgs]))]
+
   const categorizedImages = {
-    All: allImages,
-    Exterior: allImages.slice(0, Math.ceil(allImages.length / 2)),
-    Interior: allImages.slice(Math.ceil(allImages.length / 2)),
-    Engine: allImages.slice(-1)
+    All: allFilteredImages,
+    Exterior: exteriorImgs,
+    Interior: interiorImgs,
+    Engine: engineImgs
   }
   
   const currentImagesList = (categorizedImages[activeGallery] && categorizedImages[activeGallery].length > 0) 
     ? categorizedImages[activeGallery] 
-    : allImages
+    : allFilteredImages
 
-  const currentImage = currentImagesList[currentImageIndex] || allImages[0]
+  const currentImage = currentImagesList[currentImageIndex] || allFilteredImages[0]
 
   const nextImage = () => setCurrentImageIndex((prev) => (prev === currentImagesList.length - 1 ? 0 : prev + 1))
   const prevImage = () => setCurrentImageIndex((prev) => (prev === 0 ? currentImagesList.length - 1 : prev - 1))

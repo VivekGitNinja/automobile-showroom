@@ -15,10 +15,10 @@ export default function InteriorPanorama3D() {
   const [activeAngle, setActiveAngle] = useState<AngleId>('cockpit')
 
   const angles: InteriorAngle[] = [
-    { id: 'cockpit', name: 'Dashboard & Infotainment', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'seats', name: 'Bespoke Leather Seats', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'starlight', name: 'Bespoke Starlight Headliner', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'steering', name: 'Carbon Fiber Steering Wheel', image: '/images/dynamic/bugatti_exterior.jpg' },
+    { id: 'cockpit', name: 'Dashboard & Infotainment', image: '/images/dynamic/interior_dashboard_1785319238155.jpg' },
+    { id: 'seats', name: 'Bespoke Leather Seats', image: '/images/dynamic/interior_seats_1785319256690.jpg' },
+    { id: 'starlight', name: 'Bespoke Starlight Headliner', image: '/images/dynamic/interior_headliner_1785319295000.jpg' },
+    { id: 'steering', name: 'Carbon Fiber Steering Wheel', image: '/images/dynamic/interior_steering_1785319277541.jpg' },
   ]
 
   const currentAngle = angles.find((a) => a.id === activeAngle) || angles[0]

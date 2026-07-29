@@ -5,10 +5,10 @@ import { Disc, Sparkles, Check } from 'lucide-react'
 
 export default function WheelConfigurator() {
   const wheels = [
-    { id: 'diamond', name: '21" Diamond-Cut Dual-Tone Alloy', finish: 'Polished Billet', weight: '-4.2 kg per wheel', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'carbon', name: '22" Forged Carbon Fiber Weave', finish: 'Gloss Clearcoat', weight: '-8.5 kg per wheel', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'gold', name: '21" Satin Champagne Gold Lightweight', finish: 'Anodized Gold', weight: '-5.0 kg per wheel', image: '/images/dynamic/bugatti_exterior.jpg' },
-    { id: 'titanium', name: '22" Dark Titanium Monobloc', finish: 'Matte Titanium', weight: '-6.8 kg per wheel', image: '/images/dynamic/bugatti_exterior.jpg' },
+    { id: 'diamond', name: '21" Diamond-Cut Dual-Tone Alloy', finish: 'Polished Billet', weight: '-4.2 kg per wheel', image: '/images/dynamic/spec_silver.jpg' },
+    { id: 'carbon', name: '22" Forged Carbon Fiber Weave', finish: 'Gloss Clearcoat', weight: '-8.5 kg per wheel', image: '/images/dynamic/spec_carbon.jpg' },
+    { id: 'gold', name: '21" Satin Champagne Gold Lightweight', finish: 'Anodized Gold', weight: '-5.0 kg per wheel', image: '/images/dynamic/hotspot_brakes.jpg' },
+    { id: 'titanium', name: '22" Dark Titanium Monobloc', finish: 'Matte Titanium', weight: '-6.8 kg per wheel', image: '/images/dynamic/hotspot_chassis.jpg' },
   ]
 
   const [selectedWheel, setSelectedWheel] = useState(wheels[0])
