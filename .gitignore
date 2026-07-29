@@ -46,3 +46,8 @@ uploads/
 
 # Package lock
 package-lock.json
+
+# ESAD Document folder and PDF — NOT part of the repo
+ESAD_Document/
+*.pdf
+.agents/
