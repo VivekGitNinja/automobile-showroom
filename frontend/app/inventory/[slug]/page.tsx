@@ -12,8 +12,9 @@ import EmiCalculatorModal from '../../../components/EmiCalculatorModal'
 import InteriorPanorama3D from '../../../components/3d/InteriorPanorama3D'
 import CarShowcase3D from '../../../components/3d/CarShowcase3D'
 import WheelConfigurator from '../../../components/3d/WheelConfigurator'
+import InteractiveHotspotViewer from '../../../components/3d/InteractiveHotspotViewer'
 import VehicleCard from '../../../components/VehicleCard'
-import { ShieldCheck, Phone, CheckCircle, ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Zap, Globe, Calculator, Maximize2, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, Layers, Image as ImageIcon, Volume2, Activity } from 'lucide-react'
+import { ShieldCheck, Phone, CheckCircle, ArrowLeft, ArrowRight, Calendar, Gauge, Fuel, Zap, Globe, Calculator, Maximize2, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, Layers, Image as ImageIcon, Volume2, Activity, Wind, Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { playVehicleEngineSound } from '../../../lib/soundEngine'
 
@@ -182,11 +183,14 @@ export default function VehicleDetailPage() {
               <div className="flex flex-wrap items-center gap-3 mb-6 text-[10px] font-mono uppercase tracking-[0.2em] text-[#C9A227]">
                 <span className="px-3 py-1 rounded-full border border-[#C9A227]/40 bg-[#C9A227]/10">{vehicle.make}</span>
                 {vehicle.isFeatured && <span className="px-3 py-1 rounded-full bg-[#C9A227] text-black font-bold flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Flagship</span>}
+                {vehicle.isLimited && <span className="px-3 py-1 rounded-full border border-purple-500/40 bg-purple-500/10 text-purple-400 flex items-center gap-1"><Star className="w-3 h-3"/> Limited Edition</span>}
+                {vehicle.isCollector && <span className="px-3 py-1 rounded-full border border-blue-500/40 bg-blue-500/10 text-blue-400 flex items-center gap-1"><CheckCircle className="w-3 h-3"/> Collector's Item</span>}
+                {vehicle.isCertified && <span className="px-3 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Certified</span>}
                 <span className="px-3 py-1 rounded-full border border-white/10 text-[#A0A0A0] bg-black flex items-center gap-1"><CheckCircle className="w-3 h-3"/> GCC Verified</span>
               </div>
               
               <h1 className="text-4xl sm:text-6xl font-serif font-extrabold text-white mb-4 leading-tight tracking-tight">
-                {vehicle.make} {vehicle.model}
+                {vehicle.year} {vehicle.make} {vehicle.model}
               </h1>
               <p className="text-lg text-[#A0A0A0] font-light font-serif italic mb-8">{vehicle.trim || 'Bespoke Commission'}</p>
 
@@ -235,7 +239,7 @@ export default function VehicleDetailPage() {
                 <span>Technical Data</span>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-10">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-[#7A7A7A] uppercase tracking-widest font-mono">Engine</span>
                   <span className="text-sm font-bold text-white truncate flex items-center gap-2"><Zap className="w-4 h-4 text-[#C9A227]"/> {vehicle.specs?.power || vehicle.horsepower || vehicle.engine || 'V8'}</span>
@@ -243,6 +247,14 @@ export default function VehicleDetailPage() {
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-[#7A7A7A] uppercase tracking-widest font-mono">0-100 km/h</span>
                   <span className="text-sm font-bold text-white truncate flex items-center gap-2"><Gauge className="w-4 h-4 text-[#C9A227]"/> {vehicle.specs?.acceleration || vehicle.acceleration || '2.9s'}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-[#7A7A7A] uppercase tracking-widest font-mono">Top Speed</span>
+                  <span className="text-sm font-bold text-white truncate flex items-center gap-2"><Wind className="w-4 h-4 text-[#C9A227]"/> {vehicle.specs?.topSpeed || vehicle.topSpeed || '350 km/h'}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-[#7A7A7A] uppercase tracking-widest font-mono">Torque</span>
+                  <span className="text-sm font-bold text-white truncate flex items-center gap-2"><Activity className="w-4 h-4 text-[#C9A227]"/> {vehicle.specs?.torque || vehicle.torque || '800 Nm'}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-[#7A7A7A] uppercase tracking-widest font-mono">Mileage</span>
@@ -292,6 +304,17 @@ export default function VehicleDetailPage() {
             {/* 360 & Wheels */}
             <div className="space-y-12">
               <CarShowcase3D />
+              <InteractiveHotspotViewer 
+                vehicleName={vehicle.make} 
+                vehicleSubName={vehicle.model} 
+                hotspots={vehicle.hotspots} 
+                performanceStats={[
+                  { val: vehicle.specs?.topSpeed || vehicle.topSpeed || '350 km/h', label: 'Max Speed' },
+                  { val: vehicle.specs?.acceleration || vehicle.acceleration || '2.9 sec', label: '0 - 100 km/h' },
+                  { val: vehicle.engine || 'V8 Bi-Turbo', label: 'Powertrain' },
+                  { val: vehicle.specs?.power || vehicle.horsepower || '720 HP', label: 'Bespoke Output' }
+                ]}
+              />
               <InteriorPanorama3D />
               <WheelConfigurator />
             </div>
