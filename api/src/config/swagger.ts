@@ -30,6 +30,6 @@ export function setupSwagger(app: Application) {
   }
 
   app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(document, options))
-  app.get('/api/docs', (req, res) => res.redirect('/api/v1/docs'))
-  app.get('/docs', (req, res) => res.redirect('/api/v1/docs'))
+  app.get('/api/docs', (_req, res) => res.redirect('/api/v1/docs'))
+  app.get('/docs', (_req, res) => res.redirect('/api/v1/docs'))
 }
