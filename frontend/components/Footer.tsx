@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ShieldCheck, MapPin, Phone, Mail, Sparkles, ArrowRight, Instagram, Youtube, Twitter, Facebook, Loader2, Check } from 'lucide-react'
 import CarRunningAnimation from './CarRunningAnimation'
@@ -10,6 +10,18 @@ export default function Footer() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [settings, setSettings] = useState<any>(null)
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.data) {
+          setSettings(data.data)
+        }
+      })
+      .catch(err => console.error(err))
+  }, [])
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,6 +112,8 @@ export default function Footer() {
             <ul className="space-y-4 text-xs font-mono uppercase tracking-widest text-[#B8B8B8]">
               <li><Link href="/inventory" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">Inventory</Link></li>
               <li><Link href="/brands" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">Marques</Link></li>
+              <li><Link href="/parts" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">Spare Parts</Link></li>
+              <li><Link href="/blog" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">Journal</Link></li>
               <li><Link href="/sell-your-car" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">Sell Vehicle</Link></li>
               <li><Link href="/faq" className="hover:text-[#C9A227] hover:translate-x-1 inline-block transition-all duration-300">FAQ & Policies</Link></li>
             </ul>
@@ -119,25 +133,25 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div className="lg:col-span-3">
-            <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#C9A227] mb-6 font-bold">Dubai Flagship Showroom</h4>
+            <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#C9A227] mb-6 font-bold">{settings?.showroomName || 'Dubai Flagship Showroom'}</h4>
             <ul className="space-y-5 text-xs font-mono text-[#A0A0A0]">
               <li className="flex items-start gap-4">
                 <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                   <MapPin className="w-3.5 h-3.5 text-[#C9A227]" />
                 </div>
-                <span className="leading-relaxed pt-1">Sheikh Zayed Road,<br/>Al Quoz Industrial 3, Dubai, UAE</span>
+                <span className="leading-relaxed pt-1 whitespace-pre-line">{settings?.address || 'Sheikh Zayed Road,\nAl Quoz Industrial 3, Dubai, UAE'}</span>
               </li>
               <li className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group hover:bg-[#C9A227]/20 hover:border-[#C9A227]/50 transition-all cursor-pointer">
                   <Phone className="w-3.5 h-3.5 text-[#C9A227] group-hover:animate-pulse" />
                 </div>
-                <span>+971 50 891 9441</span>
+                <span>{settings?.phone || '+971 50 891 9441'}</span>
               </li>
               <li className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group hover:bg-[#C9A227]/20 hover:border-[#C9A227]/50 transition-all cursor-pointer">
                   <Mail className="w-3.5 h-3.5 text-[#C9A227]" />
                 </div>
-                <span>info@techzoetic.com</span>
+                <span>{settings?.email || 'info@techzoetic.com'}</span>
               </li>
             </ul>
           </div>
@@ -149,15 +163,27 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} Apex Luxury Automobiles Dubai. All rights reserved.</p>
           
           <div className="flex gap-4">
-            <a href="https://twitter.com/apexluxury" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
-              <Twitter className="w-3.5 h-3.5" />
-            </a>
-            <a href="https://instagram.com/apexluxury" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
-              <Instagram className="w-3.5 h-3.5" />
-            </a>
-            <a href="https://facebook.com/apexluxury" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
-              <Facebook className="w-3.5 h-3.5" />
-            </a>
+            {settings?.socialLinks?.twitter && (
+              <a href={settings.socialLinks.twitter} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+                <Twitter className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {settings?.socialLinks?.instagram && (
+              <a href={settings.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+                <Instagram className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {settings?.socialLinks?.facebook && (
+              <a href={settings.socialLinks.facebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+                <Facebook className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-[#C9A227] transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-[#C9A227] transition-colors">Terms</Link>
+            <Link href="/location" className="hover:text-[#C9A227] transition-colors">Location</Link>
           </div>
 
           <p className="flex items-center gap-1">

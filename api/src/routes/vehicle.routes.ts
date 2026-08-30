@@ -22,9 +22,22 @@ router.get('/', async (req: Request, res: Response, next: NextFunction): Promise
     const search = req.query.search as string
     const sort = req.query.sort as string || '-createdAt'
 
+    // Year filtering: exact year, or a min/max range
+    const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined
+    const minYear = req.query.minYear ? parseInt(req.query.minYear as string, 10) : undefined
+    const maxYear = req.query.maxYear ? parseInt(req.query.maxYear as string, 10) : undefined
+
     const where: any = {
       status: 'published',
       deletedAt: null,
+    }
+
+    if (year && !isNaN(year)) where.year = year
+    else if ((minYear && !isNaN(minYear)) || (maxYear && !isNaN(maxYear))) {
+      where.year = {
+        ...(minYear && !isNaN(minYear) ? { gte: minYear } : {}),
+        ...(maxYear && !isNaN(maxYear) ? { lte: maxYear } : {}),
+      }
     }
 
     if (featured) {
@@ -83,7 +96,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction): Promise
         },
         specConfigs: {
           orderBy: { displayOrder: 'asc' }
-        }
+        },
+        stories: {
+          orderBy: { displayOrder: 'asc' }
+        },
+        frames360: {
+          orderBy: { displayOrder: 'asc' }
+        },
+        sounds: true
       },
     })
 
@@ -96,6 +116,31 @@ router.get('/', async (req: Request, res: Response, next: NextFunction): Promise
         totalPages: Math.ceil(total / limit),
       },
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /api/v1/vehicles/brands — Distinct makes with vehicle counts
+router.get('/brands', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const brands = await prisma.vehicle.groupBy({
+      by: ['make'],
+      where: {
+        status: 'published',
+        deletedAt: null,
+      },
+      _count: { id: true },
+      orderBy: { make: 'asc' },
+    })
+
+    const result = brands.map(b => ({
+      name: b.make,
+      slug: b.make.toLowerCase().replace(/\s+/g, '-'),
+      count: b._count.id,
+    }))
+
+    res.json({ data: result })
   } catch (err) {
     next(err)
   }
@@ -116,7 +161,10 @@ router.get('/featured', async (_req: Request, res: Response, next: NextFunction)
         brand: true,
         images: { orderBy: { displayOrder: 'asc' } },
         hotspots: { orderBy: { displayOrder: 'asc' } },
-        specConfigs: { orderBy: { displayOrder: 'asc' } }
+        specConfigs: { orderBy: { displayOrder: 'asc' } },
+        stories: { orderBy: { displayOrder: 'asc' } },
+        frames360: { orderBy: { displayOrder: 'asc' } },
+        sounds: true
       },
     })
     res.json({ data: vehicles })
@@ -125,17 +173,21 @@ router.get('/featured', async (_req: Request, res: Response, next: NextFunction)
   }
 })
 
-// GET /api/v1/vehicles/:slug
+// GET /api/v1/vehicles/:slug — published vehicles only; drafts/archived/deleted
+// must never be publicly reachable by URL.
 router.get('/:slug', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { slug } = req.params
     const vehicle = await prisma.vehicle.findFirst({
-      where: { slug, deletedAt: null },
+      where: { slug, status: 'published', deletedAt: null },
       include: {
         brand: true,
         images: { orderBy: { displayOrder: 'asc' } },
         hotspots: { orderBy: { displayOrder: 'asc' } },
-        specConfigs: { orderBy: { displayOrder: 'asc' } }
+        specConfigs: { orderBy: { displayOrder: 'asc' } },
+        stories: { orderBy: { displayOrder: 'asc' } },
+        frames360: { orderBy: { displayOrder: 'asc' } },
+        sounds: true
       },
     })
 
@@ -153,29 +205,47 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction): Pr
 // POST /api/v1/vehicles
 router.post('/', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { make, model, year, price, transmission, status, slug } = req.body
-    
+    const {
+      make, model, year, price, transmission, status, slug,
+      trim, mileage, fuelType, bodyType, exteriorColor, interiorColor,
+      engine, doors, description, specsJson, brandId, isFeatured, videoUrl,
+    } = req.body
+
     // Quick validation
     if (!make || !model || !year) {
       res.status(400).json({ error: 'Make, model, and year are required' })
       return
     }
 
-    const vehicleSlug = slug || `${make}-${model}-${year}`.toLowerCase().replace(/\s+/g, '-')
+    const baseSlug = slug || `${make}-${model}-${year}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    let vehicleSlug = baseSlug
+    let n = 2
+    while (await prisma.vehicle.findUnique({ where: { slug: vehicleSlug } })) {
+      vehicleSlug = `${baseSlug}-${n++}`
+    }
 
     const vehicle = await prisma.vehicle.create({
       data: {
         make,
         model,
         year: parseInt(year, 10),
-        price: price ? parseInt(price, 10) : 0,
-        transmission: transmission || 'automatic',
-        status: status || 'published',
+        price: price ? parseFloat(price) : 0,
+        transmission: transmission || null,
+        status: status || 'draft',
         slug: vehicleSlug,
-        mileage: '0',
-        fuelType: 'petrol',
-        exteriorColor: 'Black',
-        interiorColor: 'Black',
+        trim: trim || null,
+        mileage: mileage || null,
+        fuelType: fuelType || null,
+        bodyType: bodyType || null,
+        exteriorColor: exteriorColor || null,
+        interiorColor: interiorColor || null,
+        engine: engine || null,
+        doors: doors ? parseInt(doors, 10) : undefined,
+        description: description || null,
+        specsJson: specsJson || undefined,
+        brandId: brandId || null,
+        isFeatured: Boolean(isFeatured),
+        videoUrl: videoUrl || null,
       },
     })
 
@@ -203,8 +273,18 @@ const updateVehicleSchema = z.object({
   doors: z.number().int().optional(),
   description: z.string().nullable().optional(),
   specsJson: z.any().optional(),
+  videoUrl: z.string().nullable().optional(),
   isFeatured: z.boolean().optional(),
   status: z.enum(['draft', 'published', 'unpublished', 'archived']).optional(),
+  isCertified: z.boolean().optional(),
+  hasServiceHistory: z.boolean().optional(),
+  hasInspectionReport: z.boolean().optional(),
+  hasWarranty: z.boolean().optional(),
+  financeAvailable: z.boolean().optional(),
+  exportAvailable: z.boolean().optional(),
+  gccVerified: z.boolean().optional(),
+  noAccidents: z.boolean().optional(),
+  originalPaint: z.boolean().optional(),
 })
 
 // PUT /api/v1/vehicles/:id
@@ -225,7 +305,7 @@ router.put('/:id', authMiddleware, rbac('editor'), async (req: Request, res: Res
     const vehicle = await prisma.vehicle.update({
       where: { id: existing.id },
       data,
-      include: { brand: true, images: true, hotspots: true, specConfigs: true },
+      include: { brand: true, images: true, hotspots: true, specConfigs: true, stories: true, frames360: true, sounds: true },
     })
 
     res.json({ data: vehicle })
@@ -402,6 +482,204 @@ router.delete('/:id/specs/:specId', authMiddleware, rbac('editor'), async (req: 
       res.status(404).json({ error: 'Spec config not found' })
       return
     }
+    next(err)
+  }
+})
+
+// ─── Story Sub-Resource CRUD ──────────────────────────────────────────
+
+const storySchema = z.object({
+  sectionType: z.string().min(1),
+  title: z.string().min(1),
+  content: z.string().min(1),
+  displayOrder: z.number().int().optional().default(0),
+})
+
+router.post('/:id/stories', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params
+    const data = storySchema.parse(req.body)
+
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { OR: [{ id: id }, { slug: id }] },
+    })
+
+    if (!vehicle) {
+      res.status(404).json({ error: 'Vehicle not found' })
+      return
+    }
+
+    const story = await prisma.vehicleStory.create({
+      data: {
+        vehicleId: vehicle.id,
+        ...data,
+      },
+    })
+
+    res.status(201).json({ data: story })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.delete('/:id/stories/:storyId', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { storyId } = req.params
+
+    await prisma.vehicleStory.delete({
+      where: { id: storyId },
+    })
+
+    res.json({ success: true, message: 'Story deleted' })
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Story not found' })
+      return
+    }
+    next(err)
+  }
+})
+
+// ─── 360Frame Sub-Resource CRUD ──────────────────────────────────────────
+
+const frameSchema = z.object({
+  imageUrl: z.string().min(1),
+  displayOrder: z.number().int().optional().default(0),
+})
+
+router.post('/:id/frames360', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params
+    const data = frameSchema.parse(req.body)
+
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { OR: [{ id: id }, { slug: id }] },
+    })
+
+    if (!vehicle) {
+      res.status(404).json({ error: 'Vehicle not found' })
+      return
+    }
+
+    const frame = await prisma.vehicle360Frame.create({
+      data: {
+        vehicleId: vehicle.id,
+        ...data,
+      },
+    })
+
+    res.status(201).json({ data: frame })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.delete('/:id/frames360/:frameId', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { frameId } = req.params
+
+    await prisma.vehicle360Frame.delete({
+      where: { id: frameId },
+    })
+
+    res.json({ success: true, message: 'Frame deleted' })
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Frame not found' })
+      return
+    }
+    next(err)
+  }
+})
+
+// ─── Sound Sub-Resource CRUD ──────────────────────────────────────────
+
+const soundSchema = z.object({
+  soundType: z.string().min(1),
+  audioUrl: z.string().min(1),
+})
+
+router.post('/:id/sounds', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params
+    const data = soundSchema.parse(req.body)
+
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { OR: [{ id: id }, { slug: id }] },
+    })
+
+    if (!vehicle) {
+      res.status(404).json({ error: 'Vehicle not found' })
+      return
+    }
+
+    const sound = await prisma.vehicleSound.create({
+      data: {
+        vehicleId: vehicle.id,
+        ...data,
+      },
+    })
+
+    res.status(201).json({ data: sound })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.delete('/:id/sounds/:soundId', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { soundId } = req.params
+
+    await prisma.vehicleSound.delete({
+      where: { id: soundId },
+    })
+
+    res.json({ success: true, message: 'Sound deleted' })
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Sound not found' })
+      return
+    }
+    next(err)
+  }
+})
+
+// GET /api/v1/vehicles/:slug/related
+router.get('/:slug/related', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { slug } = req.params
+    const current = await prisma.vehicle.findFirst({
+      where: { slug, deletedAt: null },
+    })
+    
+    if (!current) {
+      res.status(404).json({ error: 'Vehicle not found' })
+      return
+    }
+
+    const priceMin = Number(current.price) * 0.8
+    const priceMax = Number(current.price) * 1.2
+
+    const related = await prisma.vehicle.findMany({
+      where: {
+        id: { not: current.id },
+        status: 'published',
+        deletedAt: null,
+        OR: [
+          { brandId: current.brandId },
+          { price: { gte: priceMin, lte: priceMax } }
+        ]
+      },
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        brand: true,
+        images: { orderBy: { displayOrder: 'asc' } }
+      }
+    })
+
+    res.json({ data: related })
+  } catch (err) {
     next(err)
   }
 })

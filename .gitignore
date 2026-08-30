@@ -52,3 +52,7 @@ ESAD_Document/
 *.pdf
 .agents/
 ESAD_Document/
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/

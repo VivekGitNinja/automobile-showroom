@@ -11,232 +11,265 @@ export interface GoogleSheetsSyncResult {
   timestamp: string
 }
 
+interface ServiceAccountCredentials {
+  client_email: string
+  private_key: string
+}
+
+/**
+ * Resolves Google Sheets credentials from the supported environment contracts:
+ *  - GOOGLE_SERVICE_ACCOUNT_JSON: raw or base64-encoded service-account JSON
+ *  - GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY: explicit pair
+ *  - GOOGLE_SPREADSHEET_ID or GOOGLE_SHEET_ID: target spreadsheet
+ *  - GOOGLE_SHEET_NAME: tab name (default "Inventory")
+ */
+function resolveCredentials(): {
+  spreadsheetId?: string
+  credentials?: ServiceAccountCredentials
+  sheetName: string
+} {
+  const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID
+  const sheetName = process.env.GOOGLE_SHEET_NAME || 'Inventory'
+
+  let credentials: ServiceAccountCredentials | undefined
+
+  const jsonRaw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+  if (jsonRaw) {
+    try {
+      const decoded = jsonRaw.trim().startsWith('{')
+        ? jsonRaw
+        : Buffer.from(jsonRaw, 'base64').toString('utf-8')
+      const parsed = JSON.parse(decoded)
+      if (parsed.client_email && parsed.private_key) {
+        credentials = {
+          client_email: parsed.client_email,
+          private_key: parsed.private_key.replace(/\\n/g, '\n'),
+        }
+      }
+    } catch (err: any) {
+      logger.error(`GOOGLE_SERVICE_ACCOUNT_JSON is set but could not be parsed: ${err?.message}`)
+    }
+  }
+
+  if (!credentials && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    credentials = {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }
+  }
+
+  return { spreadsheetId, credentials, sheetName }
+}
+
 export class GoogleSheetsService {
-  private spreadsheetId: string | undefined
-  private clientEmail: string | undefined
-  private privateKey: string | undefined
-
-  constructor() {
-    this.spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID
-    this.clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    this.privateKey = process.env.GOOGLE_PRIVATE_KEY
-      ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
-      : undefined
-  }
-
-  /**
-   * Validates if Google Service Account credentials are configured
-   */
   public isConfigured(): boolean {
-    return Boolean(this.spreadsheetId && this.clientEmail && this.privateKey)
+    const { spreadsheetId, credentials } = resolveCredentials()
+    return Boolean(spreadsheetId && credentials)
   }
 
-  /**
-   * Syncs vehicle inventory from Google Sheets
-   */
   public async syncInventory(): Promise<GoogleSheetsSyncResult> {
     const timestamp = new Date().toISOString()
     const logs: string[] = [
       `[${new Date().toLocaleTimeString()}] Initializing Google Sheets Inventory Sync Worker...`,
     ]
 
-    let syncLogRecord
+    let syncLogRecord: { id: string } | undefined
     try {
       syncLogRecord = await prisma.syncLog.create({
         data: {
           status: 'running',
-          triggeredBy: 'manual_or_cron',
+          triggeredBy: process.env.SYNC_TRIGGERED_BY || 'manual_or_cron',
         },
       })
     } catch (e) {
       logger.error('Failed to create syncLog record', e)
     }
 
-    if (!this.isConfigured()) {
-      const msg = 'Google Sheets credentials missing (GOOGLE_SPREADSHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY).'
-      logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ WARNING: ${msg}`)
-      logs.push(`[${new Date().toLocaleTimeString()}] 💡 System using fallback internal database inventory. No records altered.`)
-      logger.warn(msg)
-
+    const finish = async (
+      status: 'completed' | 'partial' | 'failed',
+      processedCount: number,
+      updatedCount: number,
+      message: string,
+      errors: string[],
+      success: boolean
+    ): Promise<GoogleSheetsSyncResult> => {
       if (syncLogRecord) {
         await prisma.syncLog.update({
           where: { id: syncLogRecord.id },
-          data: { status: 'failed', errorsJson: JSON.stringify([msg]), completedAt: new Date() }
-        })
-      }
-
-      return {
-        success: false,
-        processedCount: 0,
-        updatedCount: 0,
-        message: 'Sync failed: Missing Google API credentials in .env.',
-        logs,
-        timestamp,
-      }
-    }
-
-    try {
-      logs.push(`[${new Date().toLocaleTimeString()}] Authenticating with Google Sheets API v4...`)
-      
-      const auth = new google.auth.JWT(
-        this.clientEmail,
-        undefined,
-        this.privateKey,
-        ['https://www.googleapis.com/auth/spreadsheets.readonly']
-      )
-
-      const sheets = google.sheets({ version: 'v4', auth })
-
-      logs.push(`[${new Date().toLocaleTimeString()}] Fetching data from Spreadsheet ID: ${this.spreadsheetId}...`)
-      
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: 'Inventory!A2:Z', // Assumes a sheet named 'Inventory' with headers in row 1
-      })
-
-      const rows = response.data.values
-      if (!rows || rows.length === 0) {
-        logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ WARNING: No data found in the specified range.`)
-        if (syncLogRecord) {
-          await prisma.syncLog.update({
-            where: { id: syncLogRecord.id },
-            data: { status: 'completed', completedAt: new Date() }
-          })
-        }
-        return {
-          success: true,
-          processedCount: 0,
-          updatedCount: 0,
-          message: 'No data found in Google Sheets.',
-          logs,
-          timestamp,
-        }
-      }
-
-      logs.push(`[${new Date().toLocaleTimeString()}] Processing ${rows.length} rows...`)
-      
-      let processedCount = 0
-      let updatedCount = 0
-      let errors = []
-
-      // Standard headers assumed: [RowID, Brand, Make, Model, Year, Price, Mileage, Transmission, FuelType, Status]
-      for (const row of rows) {
-        processedCount++
-        try {
-          const [sheetRowId, brandName, make, model, yearStr, priceStr, mileage, transmission, fuelType, statusStr] = row
-          
-          if (!sheetRowId || !make || !model || !yearStr || !priceStr) {
-             logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Row skipped: missing required fields (RowID, Make, Model, Year, Price).`)
-             errors.push(`Row ${processedCount} missing fields.`)
-             continue
-          }
-
-          const year = parseInt(yearStr, 10)
-          const price = parseFloat(priceStr.replace(/[^0-9.-]+/g, ""))
-
-          if (isNaN(year) || isNaN(price)) {
-             logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Row skipped: invalid year or price for ${make} ${model}.`)
-             errors.push(`Row ${processedCount} invalid numbers.`)
-             continue
-          }
-
-          const slug = `${make}-${model}-${year}-${sheetRowId}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-
-          // Upsert Brand if necessary (simplified for sync)
-          let brandId = null
-          if (brandName) {
-            const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-            const brand = await prisma.brand.upsert({
-               where: { slug: brandSlug },
-               update: {},
-               create: { name: brandName, slug: brandSlug }
-            })
-            brandId = brand.id
-          }
-
-          let vehicleStatus: 'draft' | 'published' | 'unpublished' | 'archived' = 'draft'
-          if (statusStr && statusStr.toLowerCase() === 'published') vehicleStatus = 'published'
-
-          await prisma.vehicle.upsert({
-            where: { sheetRowId: sheetRowId },
-            update: {
-              make,
-              model,
-              year,
-              price,
-              mileage,
-              transmission,
-              fuelType,
-              status: vehicleStatus,
-              brandId
-            },
-            create: {
-              make,
-              model,
-              year,
-              slug,
-              price,
-              mileage,
-              transmission,
-              fuelType,
-              sheetRowId,
-              status: vehicleStatus,
-              source: 'google_sheets',
-              brandId
-            }
-          })
-
-          updatedCount++
-        } catch (rowErr: any) {
-           logs.push(`[${new Date().toLocaleTimeString()}] ❌ Failed to process row ${processedCount}: ${rowErr.message}`)
-           errors.push(`Row ${processedCount} error: ${rowErr.message}`)
-        }
-      }
-
-      logs.push(`[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${updatedCount} vehicles updated in database.`)
-
-      if (syncLogRecord) {
-        await prisma.syncLog.update({
-          where: { id: syncLogRecord.id },
-          data: { 
-            status: errors.length > 0 ? (updatedCount > 0 ? 'partial' : 'failed') : 'completed', 
+          data: {
+            status,
             rowsProcessed: processedCount,
             rowsUpdated: updatedCount,
-            errorsJson: JSON.stringify(errors),
-            completedAt: new Date() 
-          }
-        })
+            errorsJson: errors.length > 0 ? JSON.stringify(errors) : undefined,
+            completedAt: new Date(),
+          },
+        }).catch((e) => logger.error('Failed to finalize syncLog record', e))
       }
+      return { success, processedCount, updatedCount, message, logs, timestamp }
+    }
 
-      return {
-        success: true,
-        processedCount,
-        updatedCount,
-        message: `Successfully synchronized ${updatedCount} vehicle listings from Google Sheets.`,
-        logs,
-        timestamp,
-      }
+    const { spreadsheetId, credentials, sheetName } = resolveCredentials()
+
+    if (!spreadsheetId || !credentials) {
+      const msg = 'Google Sheets sync is not configured. Set GOOGLE_SHEET_ID (or GOOGLE_SPREADSHEET_ID) and GOOGLE_SERVICE_ACCOUNT_JSON (or GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY).'
+      logs.push(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`)
+      logs.push(`[${new Date().toLocaleTimeString()}] No demo data was seeded — the website inventory is untouched.`)
+      return finish('failed', 0, 0, msg, [msg], false)
+    }
+
+    let rows: any[] = []
+    try {
+      logs.push(`[${new Date().toLocaleTimeString()}] Authenticating with Google Sheets API v4...`)
+      const auth = new google.auth.JWT(
+        credentials.client_email,
+        undefined,
+        credentials.private_key,
+        ['https://www.googleapis.com/auth/spreadsheets.readonly']
+      )
+      const sheets = google.sheets({ version: 'v4', auth })
+      logs.push(`[${new Date().toLocaleTimeString()}] Fetching data from Spreadsheet ID: ${spreadsheetId} [${sheetName}!A2:Z]...`)
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A2:Z`,
+      })
+      rows = response.data.values || []
     } catch (err: any) {
-      const errorMsg = `Google Sheets sync error: ${err?.message || 'Unknown error'}`
+      const errorMsg = `Google Sheets API error: ${err?.message || 'Unknown error'}`
       logs.push(`[${new Date().toLocaleTimeString()}] ❌ ERROR: ${errorMsg}`)
-      logger.error(errorMsg)
+      return finish('failed', 0, 0, errorMsg, [errorMsg], false)
+    }
 
-      if (syncLogRecord) {
-        await prisma.syncLog.update({
-          where: { id: syncLogRecord.id },
-          data: { status: 'failed', errorsJson: JSON.stringify([errorMsg]), completedAt: new Date() }
-        })
+    if (!rows || rows.length === 0) {
+      logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ WARNING: No data found to sync.`)
+      return finish('completed', 0, 0, 'No data found.', [], true)
+    }
+
+    logs.push(`[${new Date().toLocaleTimeString()}] Processing ${rows.length} rows...`)
+
+    let processedCount = 0
+    let updatedCount = 0
+    let insertedCount = 0
+    const errors: string[] = []
+
+    for (const row of rows) {
+      processedCount++
+      const [sheetRowId, brandName, make, model, yearStr, priceStr, mileage, transmission, fuelType, statusStr, imageUrl] = row
+
+      // Validation: a malformed row must never break the sync or corrupt a
+      // listing — it is quarantined for staff review instead.
+      const validationErrors: string[] = []
+      if (!sheetRowId) validationErrors.push('Missing RowID')
+      if (!make) validationErrors.push('Missing Make')
+      if (!model) validationErrors.push('Missing Model')
+      const year = parseInt(String(yearStr || ''), 10)
+      if (!yearStr || isNaN(year)) validationErrors.push('Missing or invalid Year')
+      const price = parseFloat(String(priceStr || '').replace(/[^0-9.-]+/g, ''))
+      if (!priceStr || isNaN(price)) validationErrors.push('Missing or invalid Price')
+
+      if (validationErrors.length > 0) {
+        const reason = `Row ${processedCount}: ${validationErrors.join('; ')}`
+        logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Row quarantined: ${reason}`)
+        errors.push(reason)
+        try {
+          await prisma.syncQuarantine.create({
+            data: {
+              sheetRowId: sheetRowId || null,
+              rawRowData: JSON.parse(JSON.stringify(row)),
+              validationErrors: JSON.parse(JSON.stringify(validationErrors)),
+            },
+          })
+        } catch (qErr: any) {
+          logger.error(`Failed to quarantine row ${processedCount}: ${qErr?.message}`)
+        }
+        continue
       }
 
-      return {
-        success: false,
-        processedCount: 0,
-        updatedCount: 0,
-        message: errorMsg,
-        logs,
-        timestamp,
+      try {
+        const slug = `${make}-${model}-${year}-${sheetRowId}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+
+        let brandId = null
+        if (brandName) {
+          const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+          const brand = await prisma.brand.upsert({
+            where: { slug: brandSlug },
+            update: {},
+            create: { name: brandName, slug: brandSlug }
+          })
+          brandId = brand.id
+        }
+
+        let vehicleStatus: 'draft' | 'published' | 'unpublished' | 'archived' = 'draft'
+        if (statusStr && statusStr.toLowerCase() === 'published') vehicleStatus = 'published'
+
+        const existing = await prisma.vehicle.findUnique({ where: { sheetRowId: String(sheetRowId) } })
+
+        const payload = {
+          make: String(make),
+          model: String(model),
+          year,
+          price,
+          mileage: mileage ? String(mileage) : null,
+          transmission: transmission ? String(transmission) : null,
+          fuelType: fuelType ? String(fuelType) : null,
+          status: vehicleStatus,
+          brandId,
+        }
+
+        const vehicle = existing
+          ? await prisma.vehicle.update({ where: { id: existing.id }, data: payload })
+          : await prisma.vehicle.create({
+              data: {
+                ...payload,
+                slug,
+                sheetRowId: String(sheetRowId),
+                source: 'google_sheets',
+              }
+            })
+
+        if (existing) updatedCount++
+        else insertedCount++
+
+        // Handle Image Attachments (if provided in 11th column)
+        if (imageUrl) {
+          const existingImage = await prisma.vehicleImage.findFirst({
+            where: { vehicleId: vehicle.id, urlOriginal: String(imageUrl) }
+          })
+          if (!existingImage) {
+            // New sheet image becomes the primary; previous primary is demoted.
+            await prisma.vehicleImage.updateMany({
+              where: { vehicleId: vehicle.id, isPrimary: true },
+              data: { isPrimary: false },
+            })
+            await prisma.vehicleImage.create({
+              data: {
+                vehicleId: vehicle.id,
+                urlOriginal: String(imageUrl),
+                isPrimary: true,
+                title: `${make} ${model} Exterior`
+              }
+            })
+            logs.push(`[${new Date().toLocaleTimeString()}] 📷 Attached primary image to ${make} ${model}.`)
+          }
+        }
+      } catch (rowErr: any) {
+        const reason = `Row ${processedCount} error: ${rowErr.message}`
+        logs.push(`[${new Date().toLocaleTimeString()}] ❌ Failed to process row ${processedCount}: ${rowErr.message}`)
+        errors.push(reason)
       }
     }
+
+    logs.push(`[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${insertedCount} inserted, ${updatedCount} updated, ${errors.length} quarantined/failed.`)
+
+    const status = errors.length > 0 ? (insertedCount + updatedCount > 0 ? 'partial' : 'failed') : 'completed'
+    const result = await finish(
+      status,
+      processedCount,
+      insertedCount + updatedCount,
+      `Synchronized ${insertedCount + updatedCount} vehicle listings (${insertedCount} new, ${updatedCount} updated).`,
+      errors,
+      status !== 'failed'
+    )
+    return result
   }
 }
 

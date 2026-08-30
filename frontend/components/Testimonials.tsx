@@ -13,7 +13,7 @@ export default function Testimonials() {
       car: 'Bugatti Chiron Super Sport',
       rating: 5,
       comment: 'The team at Apex delivered my Chiron Super Sport with zero hassle. Seamless escrow payment and flawless 150-point inspection certification.',
-      avatar: '/images/dynamic/bugatti_exterior.jpg',
+      avatar: '/images/hero/hero-car-1.jpg',
     },
     {
       id: 2,
@@ -22,7 +22,7 @@ export default function Testimonials() {
       car: 'Rolls-Royce Phantom VIII',
       rating: 5,
       comment: 'Better experience than traditional dealerships! Enclosed air freight arrived in Mumbai within 48 hours in immaculate condition.',
-      avatar: '/images/dynamic/bugatti_exterior.jpg',
+      avatar: '/images/hero/hero-car-2.jpg',
     },
     {
       id: 3,
@@ -31,7 +31,7 @@ export default function Testimonials() {
       car: 'Ferrari SF90 Assetto Fiorano',
       rating: 5,
       comment: 'The 3D virtual tour and transparent pricing made ordering online effortless. Outstanding customer concierge support from day one.',
-      avatar: '/images/dynamic/bugatti_exterior.jpg',
+      avatar: '/images/hero/hero-car-3.jpg',
     },
   ]
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Hero from '../components/Hero'
 import BrandMarquee from '../components/BrandMarquee'
-import InteractiveHotspotViewer from '../components/3d/InteractiveHotspotViewer'
+
 import VehicleCard from '../components/VehicleCard'
 import Testimonials from '../components/Testimonials'
 import QuickSellBanner from '../components/QuickSellBanner'
@@ -14,24 +14,28 @@ import { Sparkles, ArrowRight, ShieldCheck, Award, Globe, Box, Loader2, PlayCirc
 import { fetchVehiclesFromApi, fetchJournalsFromApi } from '../lib/api'
 import { Vehicle, Journal } from '../lib/types'
 import { motion } from 'framer-motion'
+import { useToast } from '../lib/useToast'
 
 
 
 export default function HomePage() {
+  const { toast } = useToast()
   const [featuredVehicles, setFeaturedVehicles] = useState<Vehicle[]>([])
   const [latestArrivals, setLatestArrivals] = useState<Vehicle[]>([])
   const [journals, setJournals] = useState<Journal[]>([])
+  const [totalInventory, setTotalInventory] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let isMounted = true
-    fetchVehiclesFromApi() 
+    fetchVehiclesFromApi()
       .then((response) => {
         if (isMounted) {
           const data = response.data || []
           const featured = data.filter((v: Vehicle) => v.isFeatured).slice(0, 3)
           setFeaturedVehicles(featured.length > 0 ? featured : data.slice(0, 3))
           setLatestArrivals(data.slice(0, 4))
+          setTotalInventory(response.total)
         }
       })
       .catch((err) => {
@@ -132,7 +136,7 @@ export default function HomePage() {
               loop 
               playsInline
               className="object-cover w-full h-full opacity-50 brightness-90"
-              poster="/images/dynamic/bugatti_exterior.jpg"
+              poster="/images/hero/hero-car-1.jpg"
             >
              <source src="/videos/hero-cinematic.mp4" type="video/mp4" />
            </video>
@@ -163,13 +167,13 @@ export default function HomePage() {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
-                  onClick={() => alert('Opening Invitation Request Form...')}
+                  onClick={() => toast('Opening Invitation Request Form...', 'info')}
                   className="h-14 px-8 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#9E7D1A] text-black font-mono font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_20px_rgba(201,162,39,0.3)] hover:shadow-[0_0_30px_rgba(201,162,39,0.5)]"
                 >
                   Request Invitation
                 </button>
                 <button 
-                  onClick={() => alert('Playing VIP Experience Film...')}
+                  onClick={() => toast('Playing VIP Experience Film...', 'info')}
                   className="group h-14 px-8 rounded-full glass-panel border border-[#C9A227]/30 text-white font-mono font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:border-[#C9A227] transition-all duration-300"
                 >
                   <PlayCircle className="w-4 h-4 group-hover:text-[#C9A227] transition-colors" />
@@ -181,52 +185,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. 3D Interactive Hotspot Inspection Studio */}
-      <section className="py-32 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
-        >
-          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full glass-panel border-[#C9A227]/40 text-[#C9A227] text-[10px] font-mono uppercase tracking-[0.3em] mb-4 shadow-[0_0_30px_rgba(201,162,39,0.15)]">
-            <Box className="w-4 h-4" />
-            <span>Interactive 3D Motion Inspection</span>
-          </div>
-          <h2 className="text-4xl sm:text-6xl font-serif font-extrabold text-white mb-6">
-            Virtual <span className="italic font-light text-white/70">Showroom</span>
-          </h2>
-          <p className="text-sm text-[#7A7A7A] max-w-2xl mx-auto font-light leading-relaxed">
-            Click interactive 3D hotspot nodes to inspect quad-turbo engines, carbon-ceramic brakes, bespoke cockpits, and configure paint finishes in real-time.
-          </p>
-        </motion.div>
-
-        {flagship && (
-          <InteractiveHotspotViewer 
-            vehicleName={`${flagship.brand?.name || flagship.make} ${flagship.model}`}
-            vehicleSubName={flagship.trim || ''}
-            specs={flagship.specConfigs?.map(s => ({
-              id: s.id,
-              name: s.name,
-              image: s.imageUrl,
-              hex: s.hexColor
-            }))}
-            hotspots={flagship.hotspots?.map(h => ({
-              id: h.id,
-              title: h.title,
-              subtitle: h.subtitle,
-              details: h.details,
-              stat: h.stat,
-              x: h.xPosition,
-              y: h.yPosition,
-              icon: null, // Will use default based on type inside component, or map iconType
-              partImageUrl: h.partImageUrl,
-              iconType: h.iconType
-            }))}
-          />
-        )}
-      </section>
 
       {/* 6. Quick Sell Supercar Banner */}
       <QuickSellBanner />
@@ -256,7 +214,7 @@ export default function HomePage() {
             href="/inventory"
             className="group flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-[#C9A227] hover:text-white transition-colors font-bold"
           >
-            <span>Explore All 500+ Vehicles</span>
+            <span>{totalInventory ? `Explore All ${totalInventory} Vehicles` : 'Explore Full Inventory'}</span>
             <div className="w-8 h-8 rounded-full border border-[#C9A227]/40 flex items-center justify-center group-hover:border-white transition-all">
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </div>

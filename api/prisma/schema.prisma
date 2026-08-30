@@ -83,22 +83,6 @@ enum JobStatus {
   @@map("job_status")
 }
 
-enum MediaType {
-  image_exterior
-  image_interior
-  image_engine
-  image_dashboard
-  image_detail
-  video_walkaround
-  video_drone
-  video_360
-  document_inspection
-  document_history
-  audio_soundclip
-
-  @@map("media_type")
-}
-
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   email        String    @unique @db.VarChar(255)
@@ -156,6 +140,7 @@ model Vehicle {
   doors         Int?          @default(4)
   description   String?       @db.Text
   specsJson     Json?         @map("specs_json")
+  videoUrl      String?       @map("video_url") @db.VarChar(500)
   status        VehicleStatus @default(draft)
   isFeatured    Boolean       @default(false) @map("is_featured")
   source        VehicleSource @default(cms)
@@ -166,6 +151,17 @@ model Vehicle {
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
   deletedAt     DateTime?     @map("deleted_at") @db.Timestamptz()
 
+  // Trust Flags
+  isCertified         Boolean? @default(false) @map("is_certified")
+  hasServiceHistory   Boolean? @default(false) @map("has_service_history")
+  hasInspectionReport Boolean? @default(false) @map("has_inspection_report")
+  hasWarranty         Boolean? @default(false) @map("has_warranty")
+  financeAvailable    Boolean? @default(false) @map("finance_available")
+  exportAvailable     Boolean? @default(false) @map("export_available")
+  gccVerified         Boolean? @default(false) @map("gcc_verified")
+  noAccidents         Boolean? @default(false) @map("no_accidents")
+  originalPaint       Boolean? @default(false) @map("original_paint")
+
   brand       Brand?              @relation(fields: [brandId], references: [id])
   creator     User?               @relation("VehicleCreatedBy", fields: [createdBy], references: [id])
   updater     User?               @relation("VehicleUpdatedBy", fields: [updatedBy], references: [id])
@@ -173,6 +169,9 @@ model Vehicle {
   leads       Lead[]
   hotspots    VehicleHotspot[]
   specConfigs VehicleSpecConfig[]
+  stories     VehicleStory[]
+  frames360   Vehicle360Frame[]
+  sounds      VehicleSound[]
 
   @@index([slug])
   @@index([status, deletedAt])
@@ -193,11 +192,11 @@ model VehicleImage {
   displayOrder Int     @default(0) @map("display_order")
 
   // Enterprise DAM Extensions
-  mediaType   MediaType @default(image_exterior) @map("media_type")
-  title       String?   @db.VarChar(255)
-  description String?   @db.Text
-  fileSize    Int?      @map("file_size")
-  mimeType    String?   @map("mime_type") @db.VarChar(100)
+  mediaCategory String  @default("Exterior") @map("media_category")
+  title         String? @db.VarChar(255)
+  description   String? @db.Text
+  fileSize      Int?    @map("file_size")
+  mimeType      String? @map("mime_type") @db.VarChar(100)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
@@ -394,4 +393,117 @@ model Journal {
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@map("journals")
+}
+
+model VehicleStory {
+  id           String   @id @default(uuid()) @db.Uuid
+  vehicleId    String   @map("vehicle_id") @db.Uuid
+  sectionType  String   @map("section_type") @db.VarChar(100)
+  title        String   @db.VarChar(200)
+  content      String   @db.Text
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_stories")
+}
+
+model Vehicle360Frame {
+  id           String   @id @default(uuid()) @db.Uuid
+  vehicleId    String   @map("vehicle_id") @db.Uuid
+  imageUrl     String   @map("image_url") @db.VarChar(500)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_360_frames")
+}
+
+model VehicleSound {
+  id        String   @id @default(uuid()) @db.Uuid
+  vehicleId String   @map("vehicle_id") @db.Uuid
+  soundType String   @map("sound_type") @db.VarChar(100)
+  audioUrl  String   @map("audio_url") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_sounds")
+}
+
+// ─── Spare Parts Catalog ─────────────────────────────────────────────────
+// Genuine OEM & performance parts sold alongside the vehicle inventory.
+// Staff-managed via the admin CMS; no code changes required to maintain.
+
+enum PartCondition {
+  NEW
+  REFURBISHED
+  USED
+}
+
+enum PartStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model PartCategory {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String  @db.VarChar(100)
+  slug         String  @unique @db.VarChar(120)
+  description  String? @db.Text
+  displayOrder Int     @default(0) @map("display_order")
+  isActive     Boolean @default(true)
+
+  parts Part[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("part_categories")
+}
+
+model Part {
+  id              String        @id @default(uuid()) @db.Uuid
+  slug            String        @unique @db.VarChar(220)
+  sku             String        @unique @db.VarChar(80)
+  name            String        @db.VarChar(200)
+  description     String?       @db.Text
+  categoryId      String?       @map("category_id") @db.Uuid
+  brandName       String?       @map("brand_name") @db.VarChar(100)
+  compatibleMakes Json?         @map("compatible_makes")
+  condition       PartCondition @default(NEW)
+  price           Decimal       @db.Decimal(12, 2)
+  currency        String        @default("AED") @db.VarChar(10)
+  stockQty        Int           @default(0) @map("stock_qty")
+  imageUrl        String?       @map("image_url") @db.VarChar(500)
+  status          PartStatus    @default(DRAFT)
+  displayOrder    Int           @default(0) @map("display_order")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  category PartCategory? @relation(fields: [categoryId], references: [id])
+
+  @@map("parts")
+}
+
+model SiteSettings {
+  id                            String   @id @default("global") @db.VarChar(50)
+  showroomName                  String   @map("showroom_name") @db.VarChar(200)
+  address                       String   @db.Text
+  phone                         String   @db.VarChar(50)
+  whatsappNumber                String   @map("whatsapp_number") @db.VarChar(50)
+  email                         String   @db.VarChar(255)
+  openingHours                  String   @map("opening_hours") @db.Text
+  mapEmbedUrl                   String?  @map("map_embed_url") @db.Text
+  socialLinks                   Json?    @map("social_links")
+  heroBanner                    Json?    @map("hero_banner")
+  featuredVehicleSelectionRules Json?    @map("featured_vehicle_selection_rules")
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("site_settings")
 }

@@ -44,6 +44,15 @@ export default function BlogsSection({ journals }: BlogsSectionProps) {
         </Link>
       </motion.div>
 
+      {displayJournals.length === 0 ? (
+        <div className="py-20 text-center rounded-[32px] border border-white/5 bg-[#0A0A0A]/60">
+          <BookOpen className="w-10 h-10 text-[#C9A227]/50 mx-auto mb-6" />
+          <p className="text-lg font-serif text-white mb-2">Our Journal is being written</p>
+          <p className="text-xs text-[#7A7A7A] font-mono uppercase tracking-widest max-w-md mx-auto leading-relaxed">
+            New automotive stories, market intelligence and collection news are on their way. Check back soon.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
         {displayJournals.map((b, i) => (
           <motion.article 
@@ -54,7 +63,7 @@ export default function BlogsSection({ journals }: BlogsSectionProps) {
             transition={{ duration: 0.6, delay: i * 0.15 }}
             className="glass-card-elevated luxury-card-hover rounded-[32px] overflow-hidden group"
           >
-            <Link href={`/blog/${b.id}`} className="h-full flex flex-col justify-between">
+            <Link href={`/blog/${b.slug}`} className="h-full flex flex-col justify-between">
               <div className="relative h-64 w-full overflow-hidden bg-[#030303]">
                 {/* Parallax Image Zoom */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -93,6 +102,7 @@ export default function BlogsSection({ journals }: BlogsSectionProps) {
           </motion.article>
         ))}
       </div>
+      )}
     </section>
   )
 }

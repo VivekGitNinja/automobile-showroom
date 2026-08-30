@@ -28,7 +28,7 @@ const HERO_MEDIA: MediaItem[] = [
     type: 'video',
     src: '/videos/hero-video-1.mp4',
     title: 'Showroom Arrival',
-    subtitle: 'Bugatti Chiron Super Sport Entrance',
+    subtitle: 'Exclusive Hypercar Entrance',
     poster: '/images/hero/hero-car-1.jpg',
     duration: 6000
   },
@@ -54,8 +54,8 @@ const HERO_MEDIA: MediaItem[] = [
     id: 'img-1',
     type: 'image',
     src: '/images/hero/hero-car-1.jpg',
-    title: 'Bugatti Chiron Super Sport 300+',
-    subtitle: '1,578 HP Molsheim Crown Jewel',
+    title: 'Ultimate Performance Edition',
+    subtitle: '1,500+ HP Hypercar Pinnacle',
     duration: 5000
   },
   {
@@ -101,10 +101,10 @@ const HERO_MEDIA: MediaItem[] = [
 ]
 
 const ENGINE_SOUNDS = [
-  { name: 'Bugatti W16 Quad-Turbo', baseFreq: 80, peakFreq: 480, duration: 2.5 },
-  { name: 'Ferrari V8 Twin-Turbo', baseFreq: 110, peakFreq: 620, duration: 2.3 },
-  { name: 'Lamborghini V12 Atmospheric', baseFreq: 95, peakFreq: 750, duration: 2.8 },
-  { name: 'Porsche Flat-6 GT3', baseFreq: 130, peakFreq: 850, duration: 2.2 },
+  { name: 'W16 Quad-Turbo', baseFreq: 80, peakFreq: 480, duration: 2.5 },
+  { name: 'V8 Twin-Turbo', baseFreq: 110, peakFreq: 620, duration: 2.3 },
+  { name: 'V12 Atmospheric', baseFreq: 95, peakFreq: 750, duration: 2.8 },
+  { name: 'Flat-6 GT3', baseFreq: 130, peakFreq: 850, duration: 2.2 },
 ]
 
 export default function Hero({ flagship, loading }: HeroProps) {

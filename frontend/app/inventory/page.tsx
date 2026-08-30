@@ -7,6 +7,7 @@ import { Vehicle } from '../../lib/types'
 import { fetchVehiclesFromApi } from '../../lib/api'
 import { Search, SlidersHorizontal, RotateCcw, Loader2, ChevronLeft, ChevronRight, ArrowDownUp } from 'lucide-react'
 import { useDebounce } from '../../lib/hooks'
+import { API_BASE_URL } from '../../lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import ComparisonWidget from '../../components/ComparisonWidget'
 
@@ -15,32 +16,47 @@ function InventoryContent() {
   const searchParams = useSearchParams()
 
   const initialMake = searchParams.get('make') || 'All'
+  const initialBrand = searchParams.get('brand') || ''
   const initialSearch = searchParams.get('search') || ''
   const initialMaxPrice = Number(searchParams.get('maxPrice')) || 20000000
   const initialFuel = searchParams.get('fuel') || 'All'
   const initialTrans = searchParams.get('transmission') || 'All'
+  const initialMinYear = Number(searchParams.get('minYear')) || 0
   const initialSort = searchParams.get('sort') || '-createdAt'
   const initialPage = Number(searchParams.get('page')) || 1
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   const [page, setPage] = useState<number>(initialPage)
   const [totalPages, setTotalPages] = useState<number>(1)
   const [totalVehicles, setTotalVehicles] = useState<number>(0)
 
   const [selectedMake, setSelectedMake] = useState<string>(initialMake)
+  const [selectedBrand, setSelectedBrand] = useState<string>(initialBrand)
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch)
   const [maxPrice, setMaxPrice] = useState<number>(initialMaxPrice)
   const [selectedFuel, setSelectedFuel] = useState<string>(initialFuel)
   const [selectedTransmission, setSelectedTransmission] = useState<string>(initialTrans)
+  const [selectedMinYear, setSelectedMinYear] = useState<number>(initialMinYear)
   const [selectedSort, setSelectedSort] = useState<string>(initialSort)
 
   const debouncedSearch = useDebounce(searchQuery, 400)
   const debouncedMaxPrice = useDebounce(maxPrice, 400)
 
-  const makes = ['All', 'Rolls-Royce', 'Bugatti', 'Ferrari', 'Lamborghini', 'Mercedes-Maybach', 'Porsche', 'Koenigsegg', 'Pagani', 'Bentley']
+  // Marque buttons are driven by the live inventory, not a hardcoded list
+  const [makes, setMakes] = useState<string[]>(['All'])
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/vehicles/brands`)
+      .then((res) => res.json())
+      .then((res) => {
+        const names = (res?.data || []).map((b: any) => b.name).filter(Boolean)
+        if (names.length > 0) setMakes(['All', ...names])
+      })
+      .catch(() => {})
+  }, [])
 
   const updateUrlParams = useCallback((newParams: Record<string, string | number>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()))
@@ -61,7 +77,7 @@ function InventoryContent() {
   useEffect(() => {
     setPage(1)
     updateUrlParams({ page: 1 })
-  }, [selectedMake, debouncedSearch, debouncedMaxPrice, selectedFuel, selectedTransmission, selectedSort, updateUrlParams])
+  }, [selectedMake, selectedBrand, debouncedSearch, debouncedMaxPrice, selectedFuel, selectedTransmission, selectedMinYear, selectedSort, updateUrlParams])
 
   useEffect(() => {
     let isMounted = true
@@ -69,10 +85,12 @@ function InventoryContent() {
     setError(null)
 
     fetchVehiclesFromApi({
-      make: selectedMake,
+      make: selectedBrand ? undefined : selectedMake,
+      brand: selectedBrand || undefined,
       maxPrice: debouncedMaxPrice,
       fuelType: selectedFuel,
       transmission: selectedTransmission,
+      minYear: selectedMinYear || undefined,
       search: debouncedSearch,
       sort: selectedSort,
       page: page,
@@ -96,14 +114,16 @@ function InventoryContent() {
     return () => {
       isMounted = false
     }
-  }, [selectedMake, debouncedMaxPrice, selectedFuel, selectedTransmission, debouncedSearch, selectedSort, page])
+  }, [selectedMake, selectedBrand, debouncedMaxPrice, selectedFuel, selectedTransmission, selectedMinYear, debouncedSearch, selectedSort, page])
 
   const handleResetFilters = () => {
     setSelectedMake('All')
+    setSelectedBrand('')
     setSearchQuery('')
     setMaxPrice(20000000)
     setSelectedFuel('All')
     setSelectedTransmission('All')
+    setSelectedMinYear(0)
     setSelectedSort('-createdAt')
     setPage(1)
     router.replace('/inventory', { scroll: false })
@@ -151,6 +171,25 @@ function InventoryContent() {
           </button>
         </div>
 
+        {/* Active Brand Filter Chip */}
+        {selectedBrand && (
+          <div className="flex items-center gap-3 mb-4">
+            <span className="px-4 py-2 rounded-full bg-[#C9A227]/10 border border-[#C9A227]/40 text-[#C9A227] text-[10px] font-mono uppercase tracking-widest flex items-center gap-2">
+              Brand: {selectedBrand.replace(/-/g, ' ')}
+              <button
+                onClick={() => {
+                  setSelectedBrand('')
+                  updateUrlParams({ brand: '' })
+                }}
+                className="text-white/60 hover:text-white transition"
+                aria-label="Clear brand filter"
+              >
+                ✕
+              </button>
+            </span>
+          </div>
+        )}
+
         {/* Marque Quick Buttons */}
         <div className="flex items-center gap-3 overflow-x-auto pb-4 mb-2 scrollbar-none snap-x">
           {makes.map((make) => (
@@ -158,7 +197,8 @@ function InventoryContent() {
               key={make}
               onClick={() => {
                 setSelectedMake(make)
-                updateUrlParams({ make })
+                setSelectedBrand('')
+                updateUrlParams({ make, brand: '' })
               }}
               className={`snap-center px-6 py-3 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all duration-300 whitespace-nowrap border hover:-translate-y-1 ${
                 selectedMake === make
@@ -171,9 +211,9 @@ function InventoryContent() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 text-[10px] font-mono tracking-widest">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 text-[10px] font-mono tracking-widest">
           {/* Keyword Search */}
-          <div>
+          <div className="lg:col-span-2">
             <label className="block uppercase text-[#7A7A7A] mb-2">Search Query</label>
             <div className="relative group">
               <Search className="w-4 h-4 text-white/50 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#C9A227] transition-colors" />
@@ -273,6 +313,28 @@ function InventoryContent() {
             </div>
           </div>
           
+          {/* Year (Min) */}
+          <div>
+            <label className="block uppercase text-[#7A7A7A] mb-2">Year From</label>
+            <div className="relative">
+              <select
+                value={selectedMinYear || 'All'}
+                onChange={(e) => {
+                  const val = e.target.value === 'All' ? 0 : Number(e.target.value)
+                  setSelectedMinYear(val)
+                  updateUrlParams({ minYear: val })
+                }}
+                className="w-full px-4 py-3.5 rounded-xl bg-black border border-white/10 text-white focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227] transition-all appearance-none cursor-pointer"
+              >
+                <option value="All">Any Year</option>
+                {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map((y) => (
+                  <option key={y} value={y}>{y} or newer</option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/50">▼</div>
+            </div>
+          </div>
+
           {/* Sort By */}
           <div>
             <label className="block uppercase text-[#7A7A7A] mb-2">Sort By</label>

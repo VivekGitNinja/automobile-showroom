@@ -1,15 +1,22 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { ShieldCheck, Plus, RefreshCw, Layers, Users, Database, LogOut, Lock, Key, CheckCircle, Loader2, UploadCloud, Image as ImageIcon, FileText, Film, Settings } from 'lucide-react'
+import { ShieldCheck, Plus, RefreshCw, Layers, Users, Database, LogOut, Lock, Key, CheckCircle, Loader2, UploadCloud, Image as ImageIcon, FileText, Film, Settings, Edit, Trash2, Star } from 'lucide-react'
 import { API_BASE_URL } from '../../lib/api'
 import { Vehicle } from '../../lib/types'
 import AddVehicleModal from '../../components/AddVehicleModal'
+import EditVehicleModal from '../../components/EditVehicleModal'
+import SettingsManager from './_components/SettingsManager'
+import LeadsViewer from './_components/LeadsViewer'
+import SyncLogViewer from './_components/SyncLogViewer'
+import PartsManager from './_components/PartsManager'
+import JournalManager from './_components/JournalManager'
+import AssetManagerModal from './_components/AssetManagerModal'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [email, setEmail] = useState('admin@apex.ae')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
   const [syncing, setSyncing] = useState(false)
@@ -17,7 +24,13 @@ export default function AdminDashboardPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'inventory' | 'dam' | 'settings'>('inventory')
+  const [activeTab, setActiveTab] = useState<'inventory' | 'leads' | 'parts' | 'journal' | 'dam' | 'sync' | 'settings'>('inventory')
+  
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false)
+  const [selectedVehicleForAssets, setSelectedVehicleForAssets] = useState<Vehicle | null>(null)
+  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [selectedVehicleForEdit, setSelectedVehicleForEdit] = useState<Vehicle | null>(null)
   
   const [syncLog, setSyncLog] = useState<string[]>([
     'System ready. Connected to PostgreSQL 15.',
@@ -25,7 +38,8 @@ export default function AdminDashboardPage() {
   ])
 
   // DAM State
-  const [damFiles, setDamFiles] = useState<{name: string, size: number, type: string, progress: number, status: 'uploading'|'success'|'error'}[]>([])
+  const [damFiles, setDamFiles] = useState<{name: string, size: number, type: string, progress: number, status: 'uploading'|'success'|'error', url?: string, error?: string}[]>([])
+  const [mediaProvider, setMediaProvider] = useState<string>('local-fallback')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -53,6 +67,11 @@ export default function AdminDashboardPage() {
         const lData = await leadsRes.json()
         setLeads(lData.data || [])
       }
+      // Real DAM storage configuration (local disk vs S3/R2)
+      fetch(`${API_BASE_URL}/admin/media/status`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.provider) setMediaProvider(d.provider) })
+        .catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -70,8 +89,9 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ email, password })
       })
       const data = await res.json()
-      if (res.ok && data.token) {
-        localStorage.setItem('adminToken', data.token)
+      if (res.ok && data.accessToken) {
+        localStorage.setItem('adminToken', data.accessToken)
+        document.cookie = 'admin-token=' + data.accessToken + ';path=/;max-age=86400'
         setIsAuthenticated(true)
         fetchData()
       } else {
@@ -84,6 +104,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken')
+    document.cookie = 'admin-token=;path=/;max-age=0'
     setIsAuthenticated(false)
   }
 
@@ -93,16 +114,24 @@ export default function AdminDashboardPage() {
     setSyncLog((prev) => [`[${timestamp}] Initiated Google Sheets sync worker...`, ...prev])
 
     try {
-      const res = await fetch('/api/v1/sync', { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/admin/sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` } })
       const data = await res.json()
       if (res.ok) {
         setSyncLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${data.message || 'Updated from Google Spreadsheet.'}`,
+          `[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${data.data?.message || 'Updated from Google Spreadsheet.'}`,
           ...prev,
         ])
         fetchData()
       } else {
-        throw new Error(data.message || 'Sync failed')
+        const errorMsg = data.data?.message || data.data?.error || data.message || 'Sync failed'
+        if (errorMsg.includes('not configured') || errorMsg.includes('missing')) {
+           setSyncLog((prev) => [
+             `[${new Date().toLocaleTimeString()}] ⚠️ Sync Configuration Required: Google Sheets credentials missing in .env`,
+             ...prev,
+           ])
+        } else {
+           throw new Error(errorMsg)
+        }
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
@@ -112,6 +141,45 @@ export default function AdminDashboardPage() {
       ])
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (res.ok) fetchData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleToggleFeatured = async (id: string, currentFeatured: boolean) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+        body: JSON.stringify({ isFeatured: !currentFeatured })
+      })
+      if (res.ok) fetchData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleDeleteVehicle = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this vehicle?')) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      })
+      if (res.ok) fetchData()
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -127,19 +195,40 @@ export default function AdminDashboardPage() {
       
       setDamFiles(prev => [...prev, ...newFiles])
       
-      // Simulate enterprise batch upload progress
+      // Real upload to the DAM storage service (S3 / R2 / local fallback),
+      // one XHR per file so we can report honest progress.
       newFiles.forEach((file, idx) => {
-        let p = 0
-        const interval = setInterval(() => {
-          p += Math.random() * 20
-          if (p >= 100) {
-            p = 100
-            clearInterval(interval)
-            setDamFiles(prev => prev.map(df => df.name === file.name ? { ...df, progress: 100, status: 'success' } : df))
-          } else {
+        const xhr = new XMLHttpRequest()
+        const formData = new FormData()
+        const blob = Array.from(e.target.files || [])[idx]
+        formData.append('file', blob)
+        formData.append('title', file.name)
+
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            const p = (ev.loaded / ev.total) * 100
             setDamFiles(prev => prev.map(df => df.name === file.name ? { ...df, progress: p } : df))
           }
-        }, 300 + Math.random() * 200)
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            let url: string | undefined
+            try {
+              const resData = JSON.parse(xhr.responseText)
+              url = resData?.data?.url || resData?.data?.fileUrl || resData?.data?.key
+            } catch {}
+            setDamFiles(prev => prev.map(df => df.name === file.name ? { ...df, progress: 100, status: 'success', url } : df))
+          } else {
+            setDamFiles(prev => prev.map(df => df.name === file.name ? { ...df, status: 'error', error: `Upload failed (${xhr.status})` } : df))
+          }
+        }
+        xhr.onerror = () => {
+          setDamFiles(prev => prev.map(df => df.name === file.name ? { ...df, status: 'error', error: 'Upload failed (network)' } : df))
+        }
+
+        xhr.open('POST', `${API_BASE_URL}/admin/media/upload`)
+        xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('adminToken')}`)
+        xhr.send(formData)
       })
     }
   }
@@ -182,7 +271,7 @@ export default function AdminDashboardPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (e.g. password123)"
+                placeholder="Enter your password"
                 className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#C9A227] transition-colors"
               />
             </div>
@@ -216,7 +305,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex bg-[#0A0A0A] border border-white/10 rounded-full p-1">
-               {(['inventory', 'dam', 'settings'] as const).map(tab => (
+               {(['inventory', 'leads', 'parts', 'journal', 'dam', 'sync', 'settings'] as const).map(tab => (
                  <button 
                    key={tab}
                    onClick={() => setActiveTab(tab)}
@@ -263,8 +352,10 @@ export default function AdminDashboardPage() {
                     <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-[0.2em]">DAM Storage</span>
                     <Database className="w-5 h-5 text-[#C9A227]" />
                   </div>
-                  <span className="text-3xl font-serif font-bold tracking-tight relative z-10 block mb-1">1.2 TB</span>
-                  <span className="text-[10px] font-mono text-[#3DD598] uppercase">42% Used (Cloudflare R2)</span>
+                  <span className="text-3xl font-serif font-bold tracking-tight relative z-10 block mb-1 capitalize">
+                    {mediaProvider.replace(/-/g, ' ')}
+                  </span>
+                  <span className="text-[10px] font-mono text-[#3DD598] uppercase">Asset Storage Active</span>
                 </div>
 
                 <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-[#C9A227]/20 relative overflow-hidden group shadow-[0_0_30px_rgba(201,162,39,0.05)]">
@@ -325,6 +416,7 @@ export default function AdminDashboardPage() {
                           <th className="p-6 font-medium">Valuation (AED)</th>
                           <th className="p-6 font-medium">Engine/Trans</th>
                           <th className="p-6 font-medium">Global Status</th>
+                          <th className="p-6 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
@@ -342,10 +434,60 @@ export default function AdminDashboardPage() {
                             <td className="p-6 text-[#C9A227] font-bold tracking-widest">{v.price?.toLocaleString()}</td>
                             <td className="p-6 text-[#A0A0A0]">{v.engine || 'V8'} • {v.transmission}</td>
                             <td className="p-6">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3DD598]/10 text-[#3DD598] text-[9px] uppercase tracking-widest border border-[#3DD598]/30">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#3DD598]" />
-                                Published
-                              </span>
+                              <select
+                                value={v.status || 'draft'}
+                                onChange={(e) => handleUpdateStatus(v.id, e.target.value)}
+                                className={`px-3 py-1 rounded-full text-[9px] uppercase tracking-widest border font-bold appearance-none cursor-pointer focus:outline-none ${
+                                  v.status === 'published' ? 'bg-[#3DD598]/10 text-[#3DD598] border-[#3DD598]/30' :
+                                  v.status === 'archived' ? 'bg-red-500/10 text-red-500 border-red-500/30' :
+                                  'bg-white/10 text-white/50 border-white/20'
+                                }`}
+                              >
+                                <option value="published" className="bg-black text-[#3DD598]">Published</option>
+                                <option value="draft" className="bg-black text-white/50">Draft</option>
+                                <option value="archived" className="bg-black text-red-500">Archived</option>
+                              </select>
+                            </td>
+                            <td className="p-6">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleToggleFeatured(v.id, v.isFeatured || false)}
+                                  className={`p-1.5 rounded-full border transition-colors ${
+                                    v.isFeatured 
+                                      ? 'bg-gold/10 text-gold border-gold/30 hover:bg-gold/20' 
+                                      : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white/70'
+                                  }`}
+                                  title={v.isFeatured ? "Remove from Featured" : "Mark as Featured"}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${v.isFeatured ? 'fill-gold' : ''}`} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedVehicleForAssets(v)
+                                    setIsAssetModalOpen(true)
+                                  }}
+                                  className="px-3 py-1.5 rounded-full bg-gold/10 text-gold hover:bg-gold/20 border border-gold/30 text-[9px] uppercase tracking-widest transition-colors flex items-center gap-1"
+                                >
+                                  <UploadCloud className="w-3 h-3" /> Assets
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedVehicleForEdit(v)
+                                    setIsEditModalOpen(true)
+                                  }}
+                                  className="p-1.5 rounded-full bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30 transition-colors"
+                                  title="Edit Vehicle"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteVehicle(v.id)}
+                                  className="p-1.5 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-colors"
+                                  title="Delete Vehicle"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -354,6 +496,24 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'leads' && (
+            <motion.div key="leads" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <LeadsViewer />
+            </motion.div>
+          )}
+
+          {activeTab === 'parts' && (
+            <motion.div key="parts" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <PartsManager />
+            </motion.div>
+          )}
+
+          {activeTab === 'journal' && (
+            <motion.div key="journal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <JournalManager />
             </motion.div>
           )}
 
@@ -366,7 +526,7 @@ export default function AdminDashboardPage() {
                          <div className="flex items-center justify-between mb-8 border-b border-white/10 pb-6">
                             <h3 className="text-2xl font-serif font-bold">Enterprise Asset Pipeline</h3>
                             <div className="flex items-center gap-4 text-[10px] font-mono text-[#7A7A7A]">
-                               <span className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-[#3DD598]" /> R2 Storage Active</span>
+                               <span className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-[#3DD598]" /> {mediaProvider.replace(/-/g, ' ').toUpperCase()} ACTIVE</span>
                             </div>
                          </div>
                          
@@ -428,57 +588,63 @@ export default function AdminDashboardPage() {
 
                    <div className="lg:col-span-1 space-y-6">
                       <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8">
-                         <h3 className="text-sm font-serif font-bold text-white mb-6 border-b border-white/10 pb-4">Asset Taxonomy</h3>
-                         <div className="space-y-4 text-[10px] font-mono uppercase tracking-widest text-[#7A7A7A]">
-                            <div className="flex justify-between items-center bg-black p-4 rounded-xl border border-white/5">
-                               <span>Exterior Galleries</span>
-                               <span className="text-white font-bold">1,204</span>
+                         <h3 className="text-sm font-serif font-bold text-white mb-6 border-b border-white/10 pb-4">Ingested Asset Links</h3>
+                         {damFiles.filter(f => f.status === 'success' && f.url).length === 0 ? (
+                            <p className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest leading-relaxed">
+                              Uploaded assets appear here with their storage links. Attach them to a vehicle from the Assets menu in Fleet Management.
+                            </p>
+                         ) : (
+                            <div className="space-y-3 text-[10px] font-mono">
+                              {damFiles.filter(f => f.status === 'success' && f.url).map((f, i) => (
+                                <div key={i} className="bg-black p-4 rounded-xl border border-white/5">
+                                  <div className="text-white mb-1 truncate">{f.name}</div>
+                                  <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#C9A227] break-all hover:underline">{f.url}</a>
+                                </div>
+                              ))}
                             </div>
-                            <div className="flex justify-between items-center bg-black p-4 rounded-xl border border-white/5">
-                               <span>Interior 360 Panoramas</span>
-                               <span className="text-white font-bold">84</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-black p-4 rounded-xl border border-white/5">
-                               <span>Inspection PDFs</span>
-                               <span className="text-white font-bold">412</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-black p-4 rounded-xl border border-white/5">
-                               <span>Cinematic Videos</span>
-                               <span className="text-white font-bold">67</span>
-                            </div>
-                         </div>
-                      </div>
-                      
-                      <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-8 text-center">
-                         <div className="w-12 h-12 rounded-full bg-black border border-[#C9A227]/30 flex items-center justify-center mx-auto mb-4">
-                            <Settings className="w-5 h-5 text-[#C9A227]" />
-                         </div>
-                         <h4 className="text-xs font-mono uppercase tracking-widest text-white mb-2">AI Auto-Tagging</h4>
-                         <p className="text-[10px] text-[#7A7A7A] leading-relaxed font-mono">
-                           Enterprise Vision AI is currently analyzing all incoming assets to automatically tag chassis numbers, make, model, and condition anomalies.
-                         </p>
+                         )}
                       </div>
                    </div>
                 </div>
              </motion.div>
           )}
 
+           {activeTab === 'sync' && (
+             <motion.div key="sync" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+               <SyncLogViewer />
+             </motion.div>
+           )}
+
           {activeTab === 'settings' && (
-             <motion.div key="settings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex items-center justify-center py-32">
-                <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#7A7A7A]">Global Settings Module Offline (Level 5 Access Required)</span>
+             <motion.div key="settings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <SettingsManager />
              </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <AddVehicleModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={() => {
-          fetchData()
-          setSyncLog((prev) => [`[${new Date().toLocaleTimeString()}] ✅ New vehicle listing created manually via Admin Wizard.`, ...prev])
-        }}
-      />
-    </div>
+        <AddVehicleModal 
+          isOpen={isAddModalOpen} 
+          onClose={() => setIsAddModalOpen(false)} 
+          onSuccess={fetchData} 
+        />
+        
+        <EditVehicleModal 
+          vehicle={selectedVehicleForEdit}
+          isOpen={isEditModalOpen} 
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setSelectedVehicleForEdit(null)
+          }} 
+          onSuccess={fetchData} 
+        />
+
+        <AssetManagerModal
+          isOpen={isAssetModalOpen}
+          vehicle={selectedVehicleForAssets}
+          onClose={() => setIsAssetModalOpen(false)}
+          onSuccess={fetchData}
+        />
+      </div>
   )
 }

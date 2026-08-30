@@ -4,7 +4,7 @@ set -e
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="showroom_backup_${TIMESTAMP}.sql.gz"
-S3_PATH="s3://${S3_BACKUP_BUCKET}/postgres/${BACKUP_FILE}"
+S3_PATH="s3://${S3_BUCKET}/postgres/${BACKUP_FILE}"
 
 echo "[$(date)] Starting backup: ${BACKUP_FILE}"
 
@@ -18,10 +18,11 @@ aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_PATH}"   --storage-class STANDARD_IA
 rm "/tmp/${BACKUP_FILE}"
 
 # Delete backups older than 30 days
-aws s3 ls "s3://${S3_BACKUP_BUCKET}/postgres/"   | awk '{print $4}'   | while read file; do
-      file_date=$(echo $file | grep -oP '\d{8}')
+aws s3 ls "s3://${S3_BUCKET}/postgres/"   | awk '{print $4}'   | while read file; do
+      file_date=$(echo $file | sed 's/[^0-9]//g' | cut -c1-8)
+      # Note: 'date -d' is GNU-specific syntax but runs fine inside the Linux container
       if [[ $(date -d "${file_date}" +%s) -lt $(date -d "30 days ago" +%s) ]]; then
-        aws s3 rm "s3://${S3_BACKUP_BUCKET}/postgres/${file}"
+        aws s3 rm "s3://${S3_BUCKET}/postgres/${file}"
         echo "Deleted old backup: ${file}"
       fi
     done

@@ -4,7 +4,11 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import FaqChatbot from '../components/chatbot/FaqChatbot'
 import PageTransition from '../components/PageTransition'
+import WhatsAppFloatingButton from '../components/WhatsAppFloatingButton'
 import { GoogleTagManager } from '@next/third-parties/google'
+import { ToastProvider } from '../lib/useToast'
+import ToastContainer from '../components/ui/Toast'
+import { SITE_URL, SITE_NAME } from '../lib/site'
 
 export const viewport: Viewport = {
   themeColor: '#050505',
@@ -19,17 +23,18 @@ export const metadata: Metadata = {
   authors: [{ name: 'Apex Luxury Automobiles' }],
   creator: 'Apex Luxury Automobiles',
   publisher: 'Apex Luxury Automobiles',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     title: 'Apex Luxury Automobiles Dubai',
     description: 'Dubai premier showroom for luxury automobiles, rare supercars, and hypercars.',
-    url: 'https://apex.ae',
-    siteName: 'Apex Luxury',
+    url: SITE_URL,
+    siteName: SITE_NAME,
     images: [
       {
-        url: '/og-image.jpg', // Placeholder for actual OG image
+        url: '/images/hero/hero-car-1.jpg',
         width: 1200,
         height: 630,
+        alt: 'Apex Luxury Automobiles — Dubai showroom',
       }
     ],
     locale: 'en_AE',
@@ -56,7 +61,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-dark text-gray-100 min-h-screen flex flex-col antialiased selection:bg-[#C9A227] selection:text-dark">
-        <Navbar />
+        <ToastProvider>
+          <Navbar />
         <main className="flex-1">
           <script
             type="application/ld+json"
@@ -66,7 +72,7 @@ export default function RootLayout({
                 "@type": "AutoDealer",
                 "name": "Apex Luxury Automobiles",
                 "description": "Dubai's Premier Ultra-Luxury Automobile Showroom",
-                "url": "https://apexluxuryautomobiles.com",
+                "url": SITE_URL,
                 "telephone": "+971508919441",
                 "address": {
                   "@type": "PostalAddress",
@@ -97,8 +103,13 @@ export default function RootLayout({
         </main>
         <Footer />
         <FaqChatbot />
+        <WhatsAppFloatingButton />
+        <ToastContainer />
+        </ToastProvider>
       </body>
-      <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID || 'GTM-XXXXXXX'} />
+      {process.env.NEXT_PUBLIC_GTM_ID && (
+        <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+      )}
     </html>
   )
 }

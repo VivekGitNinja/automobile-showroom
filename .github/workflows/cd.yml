@@ -18,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Set image tag
         run: echo "IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
 
@@ -34,8 +37,8 @@ jobs:
           context: ./api
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository }}/api:latest
+            ghcr.io/${{ env.REPO_LC }}/api:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/api:latest
 
       - name: Build and push Frontend image
         uses: docker/build-push-action@v5
@@ -43,8 +46,8 @@ jobs:
           context: ./frontend
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/nextjs:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository }}/nextjs:latest
+            ghcr.io/${{ env.REPO_LC }}/nextjs:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/nextjs:latest
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
@@ -59,9 +62,17 @@ jobs:
           key:      ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /opt/showroom
-            docker-compose pull api nextjs sync-worker notif-worker
-            docker-compose up -d --no-deps api nextjs sync-worker notif-worker
+            # Save current image digests for rollback
+            docker compose images --format json > /tmp/pre-deploy-images.json || true
+            docker compose pull api nextjs sync-worker notif-worker
+            docker compose up -d --no-deps api nextjs sync-worker notif-worker
             sleep 15
-            curl -f http://localhost:4000/api/v1/health || (docker-compose up -d --scale api=0 && exit 1)
-            docker exec showroom_api_1 npx prisma migrate deploy
+            # Health check
+            if ! wget --no-verbose --tries=3 --spider http://localhost:4000/api/v1/health; then
+              echo "Health check failed! Rolling back..."
+              docker compose down api nextjs sync-worker notif-worker
+              docker compose up -d --no-deps api nextjs sync-worker notif-worker
+              exit 1
+            fi
+            docker compose exec api npx prisma migrate deploy
             echo "Deploy ${{ env.IMAGE_TAG }} complete"

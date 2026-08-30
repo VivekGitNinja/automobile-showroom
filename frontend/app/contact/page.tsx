@@ -5,6 +5,7 @@ import { MapPin, Phone, Mail, Clock, ShieldCheck, CheckCircle } from 'lucide-rea
 import { API_BASE_URL } from '../../lib/api'
 
 import { z } from 'zod'
+import { SITE_URL } from '../../lib/site'
 
 const contactSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -23,6 +24,7 @@ export default function ContactPage() {
     message: '',
     phone: '',
   })
+  const [settings, setSettings] = useState<any>(null)
 
   // Persistence
   React.useEffect(() => {
@@ -42,6 +44,17 @@ export default function ContactPage() {
       phone: formData.phone
     }))
   }, [formData.fullName, formData.email, formData.phone])
+
+  React.useEffect(() => {
+    fetch(`${API_BASE_URL}/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.data) {
+          setSettings(data.data)
+        }
+      })
+      .catch(err => console.error(err))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,9 +98,29 @@ export default function ContactPage() {
     }
   }
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AutoDealer',
+    name: 'Apex Luxury Automobiles',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'Sheikh Zayed Road',
+      addressLocality: 'Dubai',
+      addressCountry: 'AE',
+    },
+    telephone: '+971508919441',
+    email: 'info@techzoetic.com',
+    url: SITE_URL,
+  }
+
   return (
-    <div className="pt-36 sm:pt-40 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-center mb-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="pt-36 sm:pt-40 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
         <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#C9A227] block mb-2 font-bold">
           Concierge Relations
         </span>
@@ -107,7 +140,7 @@ export default function ContactPage() {
               <ShieldCheck className="w-5 h-5 text-[#C9A227]" />
             </div>
             <div>
-              <h3 className="text-xl font-serif font-bold text-white">Apex Luxury Automobiles</h3>
+              <h3 className="text-xl font-serif font-bold text-white">{settings?.showroomName || 'Apex Luxury Automobiles'}</h3>
               <p className="text-xs text-[#C9A227] font-mono uppercase tracking-widest font-bold">Dubai Flagship Showroom</p>
             </div>
           </div>
@@ -117,7 +150,7 @@ export default function ContactPage() {
               <MapPin className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-white block mb-0.5 font-mono uppercase tracking-widest text-[10px]">Address</span>
-                <span>Sheikh Zayed Road, Al Quoz Industrial 3, Dubai, United Arab Emirates</span>
+                <span className="whitespace-pre-line">{settings?.address || 'Sheikh Zayed Road, Al Quoz Industrial 3, Dubai, United Arab Emirates'}</span>
               </div>
             </div>
 
@@ -125,7 +158,7 @@ export default function ContactPage() {
               <Phone className="w-5 h-5 text-[#C9A227] shrink-0" />
               <div>
                 <span className="font-semibold text-white block mb-0.5 font-mono uppercase tracking-widest text-[10px]">Direct / WhatsApp</span>
-                <span>+971 50 891 9441</span>
+                <span>{settings?.phone || '+971 50 891 9441'}</span>
               </div>
             </div>
 
@@ -133,7 +166,7 @@ export default function ContactPage() {
               <Mail className="w-5 h-5 text-[#C9A227] shrink-0" />
               <div>
                 <span className="font-semibold text-white block mb-0.5 font-mono uppercase tracking-widest text-[10px]">Email Contact</span>
-                <span>info@techzoetic.com</span>
+                <span>{settings?.email || 'info@techzoetic.com'}</span>
               </div>
             </div>
 
@@ -141,7 +174,7 @@ export default function ContactPage() {
               <Clock className="w-5 h-5 text-[#C9A227] shrink-0" />
               <div>
                 <span className="font-semibold text-white block mb-0.5 font-mono uppercase tracking-widest text-[10px]">Showroom Hours</span>
-                <span>Saturday – Thursday: 10:00 AM – 9:00 PM (GST)</span>
+                <span>{settings?.openingHours || 'Saturday – Thursday: 10:00 AM – 9:00 PM (GST)'}</span>
               </div>
             </div>
           </div>
@@ -230,5 +263,6 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

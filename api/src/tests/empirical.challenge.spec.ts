@@ -250,12 +250,8 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
       expect(response.status).toBe(200)
       expect(response.body.data).toHaveLength(2)
       // Admin query findMany does NOT restrict deletedAt: null
-      expect(prisma.vehicle.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-        })
-      )
+      const findManyCall = (prisma.vehicle.findMany as jest.Mock).mock.calls[0][0]
+      expect(JSON.stringify(findManyCall.where ?? {})).not.toContain('deletedAt')
     })
 
     it('EMPIRICAL BUG: Sub-resource creation (POST /api/v1/vehicles/:id/hotspots) permits adding sub-resources to soft-deleted vehicles', async () => {
@@ -288,7 +284,7 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
   // ─── SECTION 3: Lead Status Updates & Invalid State Transitions ────────────
   describe('3. Lead Status Updates & Invalid State Transitions', () => {
 
-    it('EMPIRICAL BUG: Zod validation error on invalid lead status returns 500 INTERNAL_SERVER_ERROR instead of 400 BAD_REQUEST', async () => {
+    it('Zod validation error on invalid lead status returns 400 BAD_REQUEST with field details', async () => {
       const response = await invokeApp(app, {
         method: 'PUT',
         url: '/api/v1/admin/leads/lead-123/status',
@@ -296,9 +292,9 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
         body: { status: 'INVALID_STATUS_STRING' },
       })
 
-      // Due to missing ZodError handling in error.middleware.ts, unhandled ZodError maps to 500 Internal Server Error
-      expect(response.status).toBe(500)
-      expect(response.body.error.code).toBe('INTERNAL_SERVER_ERROR')
+      // Fixed: error.middleware.ts now maps ZodError to 400 with field-level details
+      expect(response.status).toBe(400)
+      expect(response.body.error.code).toBe('VALIDATION_ERROR')
     })
 
     it('EMPIRICAL BUG: No state machine transition guard - allows jumping directly from "new" to "converted"', async () => {
@@ -333,7 +329,9 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
       expect(response.body.data.status).toBe('new')
     })
 
-    it('EMPIRICAL INCONSISTENCY: PATCH /api/v1/leads/:id rejects "notification_failed" while admin PUT route accepts it', async () => {
+    it('PATCH /api/v1/leads/:id accepts "notification_failed" (consistency with admin PUT route)', async () => {
+      ;(prisma.lead.update as jest.Mock).mockResolvedValue({ id: 'lead-123', status: 'notification_failed' })
+
       const response = await invokeApp(app, {
         method: 'PATCH',
         url: '/api/v1/leads/lead-123',
@@ -341,8 +339,10 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
         body: { status: 'notification_failed' },
       })
 
-      // lead.routes.ts omits 'notification_failed' from updateLeadSchema enum, so it fails validation and returns 500!
-      expect(response.status).toBe(500)
+      // Fixed: notification_failed is now part of updateLeadSchema, matching the
+      // admin PUT route and the Prisma LeadStatus enum.
+      expect(response.status).toBe(200)
+      expect(response.body.data.status).toBe('notification_failed')
     })
   })
 })

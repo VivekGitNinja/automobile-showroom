@@ -2,15 +2,14 @@ import rateLimit from 'express-rate-limit'
 import RedisStore from 'rate-limit-redis'
 import { redisClient } from '../config/redis'
 
+// Use the Redis store in production (docker-compose always provides Redis so
+// limits are shared across API instances); fall back to the in-memory store in
+// dev/offline mode where Redis may never connect.
 const store = () => {
-  if (process.env.NODE_ENV === 'test') {
-    return undefined
+  if (process.env.NODE_ENV === 'production') {
+    return new RedisStore({ sendCommand: (...args: any[]) => (redisClient as any).sendCommand(args) })
   }
-  return new RedisStore({
-    sendCommand: async (...args: string[]): Promise<any> => {
-      return redisClient.call(args[0], ...args.slice(1))
-    },
-  })
+  return undefined
 }
 
 export const publicLimiter = rateLimit({

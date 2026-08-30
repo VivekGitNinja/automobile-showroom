@@ -1,19 +1,19 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import Navbar from '../../components/Navbar'
-import Footer from '../../components/Footer'
 import BlogsSection from '../../components/BlogsSection'
 import { Journal } from '../../lib/types'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
 
 export default function BlogListingPage() {
   const [journals, setJournals] = useState<Journal[]>([])
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/v1/journals')
+    fetch(`${API_BASE_URL}/journals`)
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.data) {
+        if (data.data) {
           setJournals(data.data)
         }
       })
@@ -27,7 +27,6 @@ export default function BlogListingPage() {
         <p className="text-gray-400 font-mono text-sm uppercase tracking-widest">Automotive Intelligence & Supercar Heritage</p>
       </div>
       <BlogsSection journals={journals} />
-      <Footer />
     </main>
   )
 }

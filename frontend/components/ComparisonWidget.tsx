@@ -90,7 +90,7 @@ export default function ComparisonWidget() {
             <div className="relative h-56 rounded-2xl overflow-hidden border border-[rgba(255,255,255,0.08)]">
               {/* ENGINEERING JUSTIFICATION: Dynamic CMS/CDN image URLs cannot be statically configured in next.config.js remotePatterns */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {vehicleA?.image && <img src={vehicleA.image} alt={vehicleA.model} className="w-full h-full object-cover" />}
+              {(vehicleA?.images?.[0] || vehicleA?.image) && <img src={vehicleA.images?.[0] || vehicleA.image} alt={vehicleA.model} className="w-full h-full object-cover" />}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-transparent to-transparent opacity-80" />
             </div>
 
@@ -135,7 +135,7 @@ export default function ComparisonWidget() {
             <div className="relative h-56 rounded-2xl overflow-hidden border border-[rgba(255,255,255,0.08)]">
               {/* ENGINEERING JUSTIFICATION: Dynamic CMS/CDN image URLs cannot be statically configured in next.config.js remotePatterns */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {vehicleB?.image && <img src={vehicleB.image} alt={vehicleB.model} className="w-full h-full object-cover" />}
+              {(vehicleB?.images?.[0] || vehicleB?.image) && <img src={vehicleB.images?.[0] || vehicleB.image} alt={vehicleB.model} className="w-full h-full object-cover" />}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E0E] via-transparent to-transparent opacity-80" />
             </div>
 

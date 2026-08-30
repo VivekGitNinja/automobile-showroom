@@ -30,19 +30,21 @@ async function bootstrap() {
     await redisClient.connect()
     logger.info('Redis connected')
   } catch (err: any) {
-    logger.warn(`Redis connection offline: ${err?.message || err}`)
+    logger.warn(`Redis connection offline: ${err?.message || err} — queues and rate limiting fall back to degraded mode`)
   }
 
   const app = createApp()
   const port = parseInt(env.PORT, 10)
 
-  app.listen(port, () => {
-    logger.info(`API server running on port ${port} [${env.NODE_ENV}]`)
-    logger.info(`Version: ${env.APP_VERSION}`)
-  })
+  if (process.env.RUN_MODE !== 'worker') {
+    app.listen(port, '0.0.0.0', () => {
+      logger.info(`API server running on http://0.0.0.0:${port} [${env.NODE_ENV}]`)
+      logger.info(`Version: ${env.APP_VERSION}`)
+    })
+  }
 
   // Start cron scheduler for Google Sheets sync
-  if (env.NODE_ENV === 'production') {
+  if (env.NODE_ENV === 'production' && process.env.RUN_MODE !== 'worker') {
     startSyncScheduler()
     logger.info(`Sync scheduler started: ${env.SYNC_CRON_SCHEDULE}`)
   }

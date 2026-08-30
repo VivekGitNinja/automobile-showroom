@@ -62,7 +62,7 @@ export default function SellYourCarPage() {
         const uploadData = new FormData()
         files.forEach(file => uploadData.append('files', file))
         
-        const uploadRes = await fetch(`${API_BASE_URL}/admin/media/upload`, {
+        const uploadRes = await fetch(`${API_BASE_URL}/leads/upload`, {
           method: 'POST',
           body: uploadData,
         })

@@ -18,6 +18,8 @@ import syncRoutes      from './routes/sync.routes'
 import adminRoutes     from './routes/admin.routes'
 import healthRoutes    from './routes/health.routes'
 import journalRoutes   from './routes/journal.routes'
+import settingsRoutes  from './routes/settings.routes'
+import partsRoutes     from './routes/parts.routes'
 
 // Middleware
 import { errorMiddleware } from './middleware/error.middleware'
@@ -57,6 +59,8 @@ export function createApp() {
   app.use('/api/v1/leads',     leadRoutes)
   app.use('/api/v1/faqs',      faqRoutes)
   app.use('/api/v1/auth',      authRoutes)
+  app.use('/api/v1/settings',  settingsRoutes)
+  app.use('/api/v1/parts',     partsRoutes)
   app.use('/api/v1/chatbot',   faqRoutes)   // Chatbot reuses FAQ routes
   app.use('/api/v1/admin/media',  mediaRoutes)
   app.use('/api/v1/admin/sync',   syncRoutes)

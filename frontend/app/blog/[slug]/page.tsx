@@ -1,39 +1,41 @@
-'use client'
-
-import React, { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import Navbar from '../../../components/Navbar'
-import Footer from '../../../components/Footer'
+import type { Metadata } from 'next'
+import { API_BASE_URL } from '../../../lib/api'
+import { SITE_URL } from '../../../lib/site'
 import { Journal } from '../../../lib/types'
 import { Calendar, Clock, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-export default function BlogDetailPage() {
-  const params = useParams()
-  const slug = params?.slug as string
-  const [journal, setJournal] = useState<Journal | null>(null)
-  const [loading, setLoading] = useState(true)
+export const revalidate = 300
 
-  useEffect(() => {
-    fetch(`http://localhost:4000/api/v1/journals`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && Array.isArray(data.data)) {
-          const found = data.data.find((j: Journal) => j.id === slug || j.title.toLowerCase().includes(slug?.toLowerCase() || ''))
-          setJournal(found || data.data[0])
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [slug])
-
-  if (loading) {
-    return (
-      <main className="bg-[#030303] min-h-screen text-white flex items-center justify-center font-mono text-sm">
-        Loading Story...
-      </main>
-    )
+async function getJournal(slug: string): Promise<Journal | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/journals/${slug}`, { next: { revalidate: 300 } })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.data || null
+  } catch {
+    return null
   }
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const journal = await getJournal(params.slug)
+  if (!journal) return { title: 'Story Not Found | Apex Luxury Automobiles' }
+  return {
+    title: `${journal.title} | Apex Luxury Automobiles`,
+    description: journal.snippet,
+    alternates: { canonical: `${SITE_URL}/blog/${journal.slug}` },
+    openGraph: {
+      title: journal.title,
+      description: journal.snippet,
+      images: [{ url: journal.imageUrl }],
+      type: 'article',
+    },
+  }
+}
+
+export default async function BlogDetailPage({ params }: { params: { slug: string } }) {
+  const journal = await getJournal(params.slug)
 
   if (!journal) {
     return (
@@ -42,10 +44,14 @@ export default function BlogDetailPage() {
           <h1 className="text-4xl font-serif mb-4">Story Not Found</h1>
           <Link href="/blog" className="text-[#C9A227] font-mono text-xs uppercase tracking-widest">Back to Journal</Link>
         </div>
-        <Footer />
       </main>
     )
   }
+
+  const paragraphs = (journal.content || journal.snippet)
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
 
   return (
     <main className="bg-[#030303] min-h-screen text-white pt-24">
@@ -62,7 +68,7 @@ export default function BlogDetailPage() {
           <h1 className="text-4xl sm:text-6xl font-serif font-extrabold text-white mt-6 leading-tight">
             {journal.title}
           </h1>
-          
+
           <div className="flex items-center gap-6 text-xs font-mono text-[#7A7A7A] mt-6 border-y border-white/10 py-4 uppercase tracking-widest">
             <span className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#C9A227]" /> {new Date(journal.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
             <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#C9A227]" /> {journal.readTime}</span>
@@ -76,18 +82,13 @@ export default function BlogDetailPage() {
 
         <div className="prose prose-invert max-w-none text-gray-300 font-light leading-relaxed space-y-6 text-lg">
           <p className="text-xl font-serif text-white italic border-l-2 border-[#C9A227] pl-6 py-2">
-            "{journal.snippet}"
+            &ldquo;{journal.snippet}&rdquo;
           </p>
-          <p>
-            Molsheim’s engineering marvel represents the pinnacle of combustion design. Harnessing 1,578 horsepower and 1,600 Nm of torque, the quad-turbo W16 engine pushes the physical limits of automotive dynamics.
-          </p>
-          <p>
-            Every aerodynamic surface has been sculpted to optimize high-speed stability while maintaining effortless elegance. From carbon-ceramic rotors capable of withstanding track heat to bespoke leather stitching inside the cockpit, no detail has been overlooked.
-          </p>
+          {paragraphs.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
         </div>
       </article>
-
-      <Footer />
     </main>
   )
 }

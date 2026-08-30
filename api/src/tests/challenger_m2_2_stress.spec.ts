@@ -171,7 +171,7 @@ describe('Challenger 2 — Milestone 2 Stress & Verification Tests', () => {
   })
 
   describe('Requirement 3: Email Notification Queue Job Payload Completeness (Defect Verification)', () => {
-    it('3.1 Verifies lead notification queue job payload is INCOMPLETE', async () => {
+    it('3.1 Verifies lead notification queue job payload is COMPLETE', async () => {
       const leadInput = {
         fullName: 'John Doe',
         email: 'john@example.com',
@@ -204,18 +204,14 @@ describe('Challenger 2 — Milestone 2 Stress & Verification Tests', () => {
       const [, jobPayload] = (notificationQueue.add as jest.Mock).mock.calls[0]
       const payloadStr = JSON.stringify(jobPayload)
 
-      // Empirical Findings:
-      // Phone is missing from queue job payload
-      expect(payloadStr).not.toContain(leadInput.phone)
-      // Lead ID is missing from queue job payload
-      expect(payloadStr).not.toContain(createdLead.id)
-      // Message is missing from queue job payload
-      expect(payloadStr).not.toContain(leadInput.message)
-      // Vehicle ID is missing from queue job payload
-      expect(payloadStr).not.toContain(leadInput.vehicleId)
+      // Fixed: the sales-team email now carries the full lead context
+      expect(payloadStr).toContain(leadInput.phone)
+      expect(payloadStr).toContain(createdLead.id)
+      expect(payloadStr).toContain(leadInput.message)
+      expect(payloadStr).toContain(leadInput.vehicleId)
     })
 
-    it('3.2 Verifies sell-car notification queue job payload is INCOMPLETE', async () => {
+    it('3.2 Verifies sell-car notification queue job payload is COMPLETE', async () => {
       const sellCarInput = {
         fullName: 'Jane Smith',
         email: 'jane@example.com',
@@ -250,15 +246,11 @@ describe('Challenger 2 — Milestone 2 Stress & Verification Tests', () => {
       const [, jobPayload] = (notificationQueue.add as jest.Mock).mock.calls[0]
       const payloadStr = JSON.stringify(jobPayload)
 
-      // Empirical Findings:
-      // Phone is missing
-      expect(payloadStr).not.toContain(sellCarInput.phone)
-      // Asking price is missing
-      expect(payloadStr).not.toContain(sellCarInput.askingPrice)
-      // Car mileage is missing
-      expect(payloadStr).not.toContain(sellCarInput.carMileage)
-      // Description is missing
-      expect(payloadStr).not.toContain(sellCarInput.description)
+      // Fixed: the acquisition-team email now carries the full submission context
+      expect(payloadStr).toContain(sellCarInput.phone)
+      expect(payloadStr).toContain(sellCarInput.askingPrice)
+      expect(payloadStr).toContain(sellCarInput.carMileage)
+      expect(payloadStr).toContain(sellCarInput.description)
     })
   })
 })

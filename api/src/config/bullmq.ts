@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq'
 import { redisClient } from './redis'
 import sgMail from '@sendgrid/mail'
 import { logger } from '../utils/logger'
+import { prisma } from './database'
 
 const connection = { host: redisClient.options.host, port: redisClient.options.port }
 
@@ -26,8 +27,12 @@ export const notificationQueue: any = isTest
     })
 
 // ─── Workers ─────────────────────────────────────────
-export const notificationWorker: any = isTest
-  ? { on: () => {} }
+// The API runs an inline worker by default so leads are notified even in
+// single-container deployments. When a dedicated notification worker service
+// exists (docker-compose "notif-worker"), set DISABLE_INLINE_WORKER=true on
+// the API to avoid double-sending.
+export const notificationWorker: any = (isTest || process.env.DISABLE_INLINE_WORKER === 'true')
+  ? { on: () => {}, close: async () => {} }
   : new Worker('notifications', async (job) => {
       const { to, subject, text, html } = job.data
 
@@ -49,6 +54,12 @@ export const notificationWorker: any = isTest
           await sgMail.send(msg)
           logger.info(`Email sent successfully to ${recipient}`)
         }
+        if (job.name === 'lead_notification' && job.data.leadId) {
+          await prisma.lead.updateMany({
+            where: { id: job.data.leadId, status: 'new' },
+            data: { status: 'notified' },
+          }).catch((e: any) => logger.error(`Failed to mark lead notified: ${e.message}`))
+        }
         return { success: true }
       } catch (error: any) {
         logger.error(`Failed to send email: ${error.message}`)
@@ -59,6 +70,12 @@ export const notificationWorker: any = isTest
 if (!isTest && notificationWorker && notificationWorker.on) {
   notificationWorker.on('failed', (job: any, err: any) => {
     logger.error(`Job ${job?.id} failed with error ${err.message}`)
+    if (job && job.name === 'lead_notification' && job.data?.leadId && job.attemptsMade >= (job.opts?.attempts ?? 3)) {
+      prisma.lead.update({
+        where: { id: job.data.leadId },
+        data: { status: 'notification_failed' },
+      }).catch((e: any) => logger.error(`Failed to mark lead notification_failed: ${e.message}`))
+    }
   })
 }
 

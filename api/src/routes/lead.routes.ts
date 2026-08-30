@@ -5,6 +5,8 @@ import { leadLimiter } from '../middleware/rateLimit.middleware'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { rbac } from '../middleware/rbac.middleware'
 import { notificationQueue } from '../config/bullmq'
+import multer from 'multer'
+import { storageService } from '../services/storage.service'
 
 const router = Router()
 
@@ -49,12 +51,48 @@ router.post('/', leadLimiter, async (req: Request, res: Response, next: NextFunc
     })
 
     const salesEmail = process.env.SALES_EMAIL || 'sales@apexluxuryautomobiles.com'
+
+    // Enrich the sales-team email with vehicle context (best effort — never
+    // block lead creation on this lookup).
+    let vehicleSummary = ''
+    if (data.vehicleId) {
+      try {
+        const vehicle = await prisma.vehicle.findUnique({
+          where: { id: data.vehicleId },
+          select: { make: true, model: true, year: true },
+        })
+        if (vehicle) vehicleSummary = `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+      } catch { /* vehicle context is optional */ }
+    }
+
     try {
       await notificationQueue.add('lead_notification', {
+        leadId: lead.id,
+        vehicleId: data.vehicleId || null,
         to: [data.email, salesEmail],
         subject: `New Lead: ${data.leadType.toUpperCase()} - ${data.fullName}`,
-        text: `Hello ${data.fullName},\n\nWe have received your ${data.leadType} enquiry and will get back to you soon.\n\nBest regards,\nLuxury Showroom`,
-        html: `<p>Hello ${data.fullName},</p><p>We have received your ${data.leadType} enquiry and will get back to you soon.</p><p>Best regards,<br>Luxury Showroom</p>`,
+        text: [
+          `New ${data.leadType} enquiry received.`,
+          '',
+          `Customer: ${data.fullName}`,
+          `Email: ${data.email}`,
+          `Phone: ${data.phone}`,
+          vehicleSummary ? `Vehicle: ${vehicleSummary}` : null,
+          `Lead ID: ${lead.id}`,
+          '',
+          'Message:',
+          data.message || '(no message provided)',
+        ].filter((l) => l !== null).join('\n') + '\n\nBest regards,\nLuxury Showroom',
+        html: [
+          `<h3>New ${data.leadType} enquiry received</h3>`,
+          `<p><b>Customer:</b> ${data.fullName}<br>`,
+          `<b>Email:</b> ${data.email}<br>`,
+          `<b>Phone:</b> ${data.phone}<br>`,
+          vehicleSummary ? `<b>Vehicle:</b> ${vehicleSummary}<br>` : '',
+          `<b>Lead ID:</b> ${lead.id}</p>`,
+          `<p><b>Message:</b><br>${data.message || '(no message provided)'}</p>`,
+          `<p>Best regards,<br>Luxury Showroom</p>`,
+        ].join(''),
       })
     } catch (queueErr) {
       console.error('Failed to queue lead notification:', queueErr)
@@ -89,10 +127,35 @@ router.post('/sell-car', leadLimiter, async (req: Request, res: Response, next: 
     const salesEmail = process.env.SALES_EMAIL || 'sales@apexluxuryautomobiles.com'
     try {
       await notificationQueue.add('sell_car_notification', {
+        leadId: submission.id,
         to: [data.email, salesEmail],
         subject: `New Sell Car Enquiry: ${data.carYear} ${data.carMake} ${data.carModel}`,
-        text: `Hello ${data.fullName},\n\nWe have received your sell car enquiry for ${data.carYear} ${data.carMake} ${data.carModel} and will get back to you soon.\n\nBest regards,\nLuxury Showroom`,
-        html: `<p>Hello ${data.fullName},</p><p>We have received your sell car enquiry for ${data.carYear} ${data.carMake} ${data.carModel} and will get back to you soon.</p><p>Best regards,<br>Luxury Showroom</p>`,
+        text: [
+          'New sell-your-car submission received.',
+          '',
+          `Seller: ${data.fullName}`,
+          `Email: ${data.email}`,
+          `Phone: ${data.phone}`,
+          `Vehicle: ${data.carYear} ${data.carMake} ${data.carModel}`,
+          data.carMileage ? `Mileage: ${data.carMileage}` : null,
+          data.askingPrice ? `Asking price: ${data.askingPrice}` : null,
+          `Submission ID: ${submission.id}`,
+          '',
+          'Description:',
+          data.description || '(no description provided)',
+        ].filter((l) => l !== null).join('\n') + '\n\nBest regards,\nLuxury Showroom',
+        html: [
+          `<h3>New sell-your-car submission</h3>`,
+          `<p><b>Seller:</b> ${data.fullName}<br>`,
+          `<b>Email:</b> ${data.email}<br>`,
+          `<b>Phone:</b> ${data.phone}<br>`,
+          `<b>Vehicle:</b> ${data.carYear} ${data.carMake} ${data.carModel}<br>`,
+          data.carMileage ? `<b>Mileage:</b> ${data.carMileage}<br>` : '',
+          data.askingPrice ? `<b>Asking price:</b> ${data.askingPrice}<br>` : '',
+          `<b>Submission ID:</b> ${submission.id}</p>`,
+          `<p><b>Description:</b><br>${data.description || '(no description provided)'}</p>`,
+          `<p>Best regards,<br>Luxury Showroom</p>`,
+        ].join(''),
       })
     } catch (queueErr) {
       console.error('Failed to queue sell car notification:', queueErr)
@@ -104,8 +167,35 @@ router.post('/sell-car', leadLimiter, async (req: Request, res: Response, next: 
   }
 })
 
+const upload = multer({ storage: multer.memoryStorage() })
+
+// POST /api/v1/leads/upload
+router.post('/upload', leadLimiter, upload.array('files', 5), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.files || !Array.isArray(req.files)) {
+      res.status(400).json({ status: 'error', message: 'No files provided' })
+      return
+    }
+
+    const urls = await Promise.all(
+      req.files.map(async (file) => {
+        const uploadResult = await storageService.uploadFile({
+          filename: `sell-car-uploads/${Date.now()}-${file.originalname}`,
+          buffer: file.buffer,
+          mimeType: file.mimetype,
+        })
+        return (uploadResult as any).url || (uploadResult as any).fileUrl || ''
+      })
+    )
+
+    res.json({ urls })
+  } catch (err: any) {
+    next(err)
+  }
+})
+
 const updateLeadSchema = z.object({
-  status: z.enum(['new', 'notified', 'contacted', 'qualified', 'converted', 'lost', 'follow_up']).optional(),
+  status: z.enum(['new', 'notified', 'notification_failed', 'contacted', 'qualified', 'converted', 'lost', 'follow_up']).optional(),
   assignedTo: z.string().uuid().optional(),
   message: z.string().optional(),
 })

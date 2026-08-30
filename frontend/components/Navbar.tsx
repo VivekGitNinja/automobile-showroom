@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSettings } from '../lib/useSettings'
 import ScrollProgressBar from './ScrollProgressBar'
 import LanguageToggle from './LanguageToggle'
 import { ShieldCheck, Phone, Menu, X, Sparkles } from 'lucide-react'
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+  const { waLink } = useSettings()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +25,7 @@ export default function Navbar() {
   const navLinks = [
     { name: 'Inventory', path: '/inventory' },
     { name: 'Marques', path: '/brands' },
+    { name: 'Parts', path: '/parts' },
     { name: 'Sell Your Car', path: '/sell-your-car' },
     { name: 'FAQ', path: '/faq' },
     { name: 'Contact', path: '/contact' },
@@ -93,7 +96,7 @@ export default function Navbar() {
             <div className="hidden sm:flex items-center gap-5">
               <LanguageToggle />
               <a
-                href="https://wa.me/971508919441"
+                href={waLink()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-2 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#C9A227] to-[#9E7D1A] text-black text-[9px] font-mono uppercase tracking-widest font-bold transition-all duration-300 flex items-center gap-2 shadow-[0_0_20px_rgba(201,162,39,0.3)] hover:shadow-[0_0_30px_rgba(201,162,39,0.5)] hover:brightness-110"
@@ -134,7 +137,7 @@ export default function Navbar() {
               CMS Admin
             </Link>
             <a
-              href="https://wa.me/971508919441"
+              href={waLink()}
               className="flex items-center gap-2 text-[#C9A227] font-bold mt-4"
               onClick={() => setMobileMenuOpen(false)}
             >

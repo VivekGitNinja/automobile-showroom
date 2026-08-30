@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import AboutClient from './AboutClient'
+import { SITE_URL } from '../../lib/site'
 
 export const metadata: Metadata = {
   title: 'About Us | The Apex Standard | Apex Luxury Automobiles Dubai',
@@ -8,6 +9,9 @@ export const metadata: Metadata = {
     title: 'About Us | The Apex Standard',
     description: 'Dubai\'s premier ultra-luxury automobile showroom.',
     images: [{ url: '/images/hero/hero-car-4.jpg' }]
+  },
+  alternates: {
+    canonical: `${SITE_URL}/about`,
   }
 }
 
