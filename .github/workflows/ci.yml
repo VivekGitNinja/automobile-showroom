@@ -47,7 +47,7 @@ jobs:
       - run: npx prisma generate
       - run: npm run type-check
       - run: npm run lint
-      - run: npm test -- --run --coverage
+      - run: npm test -- --coverage
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/showroom_test
           REDIS_URL: redis://localhost:6379

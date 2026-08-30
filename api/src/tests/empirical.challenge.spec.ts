@@ -115,7 +115,7 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
       })
 
       it('returns 404 when adding hotspot to non-existent vehicle', async () => {
-        ;(prisma.vehicle.findFirst as jest.Mock).mockResolvedValue(null)
+        (prisma.vehicle.findFirst as jest.Mock).mockResolvedValue(null)
 
         const response = await invokeApp(app, {
           method: 'POST',
@@ -194,7 +194,7 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
   describe('2. Soft-Deleted Vehicles Filtering in Public vs Admin Queries', () => {
 
     it('Public list query (GET /api/v1/vehicles) filters out soft-deleted vehicles', async () => {
-      ;(prisma.vehicle.count as jest.Mock).mockResolvedValue(1)
+      (prisma.vehicle.count as jest.Mock).mockResolvedValue(1)
       ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue([
         { id: 'v-active', make: 'Ferrari', status: 'published', deletedAt: null },
       ])
@@ -216,7 +216,7 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
     })
 
     it('Public single vehicle lookup (GET /api/v1/vehicles/:slug) filters out soft-deleted vehicles', async () => {
-      ;(prisma.vehicle.findFirst as jest.Mock).mockResolvedValue(null)
+      (prisma.vehicle.findFirst as jest.Mock).mockResolvedValue(null)
 
       const response = await invokeApp(app, {
         method: 'GET',
@@ -330,7 +330,7 @@ describe('Empirical Challenge Suite - Milestone 2 Backend API', () => {
     })
 
     it('PATCH /api/v1/leads/:id accepts "notification_failed" (consistency with admin PUT route)', async () => {
-      ;(prisma.lead.update as jest.Mock).mockResolvedValue({ id: 'lead-123', status: 'notification_failed' })
+      (prisma.lead.update as jest.Mock).mockResolvedValue({ id: 'lead-123', status: 'notification_failed' })
 
       const response = await invokeApp(app, {
         method: 'PATCH',

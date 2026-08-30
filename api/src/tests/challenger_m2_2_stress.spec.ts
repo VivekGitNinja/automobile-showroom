@@ -79,7 +79,7 @@ describe('Challenger 2 — Milestone 2 Stress & Verification Tests', () => {
     })
 
     it('1.4 Refresh token for non-existent or inactive user returns 401', async () => {
-      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
       const validJwtToken = jwt.sign(
         { userId: '99999999-9999-9999-9999-999999999999' },
         env.JWT_REFRESH_SECRET,

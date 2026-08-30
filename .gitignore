@@ -44,8 +44,7 @@ nginx/ssl/*.crt
 # Uploads temp
 uploads/
 
-# Package lock
-package-lock.json
+# Note: package-lock.json files ARE committed (CI runs `npm ci --frozen-lockfile`)
 
 # ESAD Document folder and PDF — NOT part of the repo
 ESAD_Document/
@@ -56,3 +55,6 @@ ESAD_Document/
 # Playwright artifacts
 frontend/test-results/
 frontend/playwright-report/
+
+# Coverage output
+api/coverage/

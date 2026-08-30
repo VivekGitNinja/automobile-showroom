@@ -94,7 +94,7 @@ describe('Vehicle Sub-Resource CRUD and Edit/Soft-Delete', () => {
     })
 
     it('should delete hotspot via DELETE /api/v1/vehicles/:id/hotspots/:hotspotId', async () => {
-      ;(prisma.vehicleHotspot.delete as jest.Mock).mockResolvedValue({ id: 'hs-1' })
+      (prisma.vehicleHotspot.delete as jest.Mock).mockResolvedValue({ id: 'hs-1' })
 
       const response = await invokeApp(app, {
         method: 'DELETE',
@@ -141,7 +141,7 @@ describe('Vehicle Sub-Resource CRUD and Edit/Soft-Delete', () => {
     })
 
     it('should delete spec config via DELETE /api/v1/vehicles/:id/specs/:specId', async () => {
-      ;(prisma.vehicleSpecConfig.delete as jest.Mock).mockResolvedValue({ id: 'spec-1' })
+      (prisma.vehicleSpecConfig.delete as jest.Mock).mockResolvedValue({ id: 'spec-1' })
 
       const response = await invokeApp(app, {
         method: 'DELETE',
