@@ -9,7 +9,14 @@
  * Performs a read-only probe against the configured Google Sheets spreadsheet.
  */
 
-import { google } from 'googleapis'
+let google: any
+try {
+  google = require('googleapis').google
+} catch {
+  const path = require('path')
+  const resolved = require.resolve('googleapis', { paths: [path.join(__dirname, '../api'), path.join(__dirname, '../api/node_modules')] })
+  google = require(resolved).google
+}
 
 const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID
 const sheetName = process.env.GOOGLE_SHEET_NAME || 'Inventory'

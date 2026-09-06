@@ -143,7 +143,7 @@ test.describe('Admin', () => {
     await page.goto('/admin/login');
     // Scope to the login card (footer newsletter also has an email input)
     await page.locator('main input[type="email"]').fill('admin@apex.ae');
-    await page.locator('main input[type="password"]').fill('password123');
+    await page.locator('main input[type="password"]').fill(process.env.ADMIN_PASSWORD || 'zojgWBXZdARzCorN8nwa');
     await page.getByRole('button', { name: /Initialize Session/i }).click();
     // Login page redirects to /admin after auth; wait for the dashboard to render
     await page.waitForURL(/\/admin(\/)?$|\/admin\?/, { timeout: 20000 });

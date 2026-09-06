@@ -66,3 +66,7 @@ api/coverage/
 backups/
 *.sql.gz
 
+# Local build and agent cache
+*.tsbuildinfo
+.freebuff/
+.mcp.json
