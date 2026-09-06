@@ -17,6 +17,36 @@ interface ServiceAccountCredentials {
 }
 
 /**
+ * Splits and validates comma, semicolon, or newline-delimited image URLs.
+ * Invalid or malformed tokens are skipped and reported via onWarning callback.
+ */
+export function parseImageUrls(raw: any, onWarning?: (warn: string) => void): string[] {
+  if (!raw) return []
+  const text = String(raw).trim()
+  if (!text) return []
+
+  const tokens = text.split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean)
+  const validUrls: string[] = []
+
+  for (const token of tokens) {
+    try {
+      const parsed = new URL(token)
+      if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && token.length <= 500) {
+        if (!validUrls.includes(token)) {
+          validUrls.push(token)
+        }
+      } else {
+        onWarning?.(`Invalid image URL (protocol or length): "${token}"`)
+      }
+    } catch {
+      onWarning?.(`Malformed image URL: "${token}"`)
+    }
+  }
+
+  return validUrls
+}
+
+/**
  * Resolves Google Sheets credentials from the supported environment contracts:
  *  - GOOGLE_SERVICE_ACCOUNT_JSON: raw or base64-encoded service-account JSON
  *  - GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY: explicit pair
@@ -153,7 +183,7 @@ export class GoogleSheetsService {
 
     for (const row of rows) {
       processedCount++
-      const [sheetRowId, brandName, make, model, yearStr, priceStr, mileage, transmission, fuelType, statusStr, imageUrl] = row
+      const [sheetRowId, brandName, make, model, yearStr, priceStr, mileage, transmission, fuelType, statusStr, rawImageUrls] = row
 
       // Validation: a malformed row must never break the sync or corrupt a
       // listing — it is quarantined for staff review instead.
@@ -229,26 +259,62 @@ export class GoogleSheetsService {
         if (existing) updatedCount++
         else insertedCount++
 
-        // Handle Image Attachments (if provided in 11th column)
-        if (imageUrl) {
-          const existingImage = await prisma.vehicleImage.findFirst({
-            where: { vehicleId: vehicle.id, urlOriginal: String(imageUrl) }
+        // Handle Multi-Image Gallery Attachments (11th column K)
+        if (rawImageUrls) {
+          const validUrls = parseImageUrls(rawImageUrls, (warn) => {
+            logs.push(`[${new Date().toLocaleTimeString()}] ⚠️ Row ${processedCount} (${make} ${model}): ${warn}`)
           })
-          if (!existingImage) {
-            // New sheet image becomes the primary; previous primary is demoted.
-            await prisma.vehicleImage.updateMany({
-              where: { vehicleId: vehicle.id, isPrimary: true },
-              data: { isPrimary: false },
+
+          if (validUrls.length > 0) {
+            const existingImages = await prisma.vehicleImage.findMany({
+              where: { vehicleId: vehicle.id },
             })
-            await prisma.vehicleImage.create({
-              data: {
-                vehicleId: vehicle.id,
-                urlOriginal: String(imageUrl),
-                isPrimary: true,
-                title: `${make} ${model} Exterior`
+            const existingMap = new Map(existingImages.map((img) => [img.urlOriginal, img]))
+
+            for (let i = 0; i < validUrls.length; i++) {
+              const url = validUrls[i]
+              const shouldBePrimary = i === 0
+              const existingImg = existingMap.get(url)
+
+              if (existingImg) {
+                if (existingImg.isPrimary !== shouldBePrimary || existingImg.displayOrder !== i) {
+                  await prisma.vehicleImage.update({
+                    where: { id: existingImg.id },
+                    data: { isPrimary: shouldBePrimary, displayOrder: i },
+                  })
+                }
+              } else {
+                if (shouldBePrimary) {
+                  await prisma.vehicleImage.updateMany({
+                    where: { vehicleId: vehicle.id, isPrimary: true },
+                    data: { isPrimary: false },
+                  })
+                }
+                await prisma.vehicleImage.create({
+                  data: {
+                    vehicleId: vehicle.id,
+                    urlOriginal: url,
+                    isPrimary: shouldBePrimary,
+                    displayOrder: i,
+                    title: `${make} ${model} ${shouldBePrimary ? 'Exterior Primary' : `Gallery ${i + 1}`}`,
+                    mediaCategory: shouldBePrimary ? 'Exterior' : 'Gallery',
+                  },
+                })
               }
-            })
-            logs.push(`[${new Date().toLocaleTimeString()}] 📷 Attached primary image to ${make} ${model}.`)
+            }
+
+            // If updating sheet-sourced images, clean up images no longer in sheet
+            if (vehicle.source === 'google_sheets') {
+              const validUrlSet = new Set(validUrls)
+              const toDelete = existingImages.filter((img) => !validUrlSet.has(img.urlOriginal))
+              for (const delImg of toDelete) {
+                await prisma.vehicleImage.delete({ where: { id: delImg.id } })
+              }
+            }
+
+            logs.push(
+              `[${new Date().toLocaleTimeString()}] 📷 Attached ${validUrls.length} image(s) to ${make} ${model} (Primary: ${validUrls[0]}).`
+            )
           }
         }
       } catch (rowErr: any) {
@@ -258,14 +324,46 @@ export class GoogleSheetsService {
       }
     }
 
-    logs.push(`[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${insertedCount} inserted, ${updatedCount} updated, ${errors.length} quarantined/failed.`)
+    // ── Removal pass ────────────────────────────────────────────────────
+    // Vehicles that were synced from the sheet but are no longer present in
+    // it are unpublished (not deleted) so the live site reflects removals.
+    // Skipped when the sheet read came back empty, so a transient empty read
+    // can never unpublish the whole inventory.
+    let removedCount = 0
+    const seenRowIds = rows
+      .map((r) => (Array.isArray(r) ? String(r[0] || '').trim() : ''))
+      .filter(Boolean)
 
-    const status = errors.length > 0 ? (insertedCount + updatedCount > 0 ? 'partial' : 'failed') : 'completed'
+    if (seenRowIds.length > 0) {
+      const syncedVehicles = await prisma.vehicle.findMany({
+        where: { source: 'google_sheets', sheetRowId: { not: null }, deletedAt: null },
+        select: { id: true, sheetRowId: true, status: true, make: true, model: true },
+      })
+      const seen = new Set(seenRowIds)
+      const missing = syncedVehicles.filter((v) => v.sheetRowId && !seen.has(v.sheetRowId))
+      for (const v of missing) {
+        if (v.status === 'published' || v.status === 'draft') {
+          await prisma.vehicle.update({
+            where: { id: v.id },
+            data: { status: 'unpublished', updatedBy: null },
+          })
+          removedCount++
+          logs.push(`[${new Date().toLocaleTimeString()}] 🗑️ Unpublished ${v.make} ${v.model} (row ${v.sheetRowId} removed from sheet).`)
+        }
+      }
+      if (missing.length > 0) {
+        logs.push(`[${new Date().toLocaleTimeString()}] ${missing.length} sheet row(s) no longer present; ${removedCount} listing(s) unpublished.`)
+      }
+    }
+
+    logs.push(`[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${insertedCount} inserted, ${updatedCount} updated, ${removedCount} removed, ${errors.length} quarantined/failed.`)
+
+    const status = errors.length > 0 ? (insertedCount + updatedCount + removedCount > 0 ? 'partial' : 'failed') : 'completed'
     const result = await finish(
       status,
       processedCount,
       insertedCount + updatedCount,
-      `Synchronized ${insertedCount + updatedCount} vehicle listings (${insertedCount} new, ${updatedCount} updated).`,
+      `Synchronized ${insertedCount + updatedCount} vehicle listings (${insertedCount} new, ${updatedCount} updated, ${removedCount} removed).`,
       errors,
       status !== 'failed'
     )
