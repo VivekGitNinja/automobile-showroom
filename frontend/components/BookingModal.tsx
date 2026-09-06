@@ -23,6 +23,7 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [companyWebsite, setCompanyWebsite] = useState('')
   const [formData, setFormData] = useState({
     fullName: '',
@@ -39,6 +40,7 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
     if (loading) return
     
     setErrors({})
+    setSubmitError(null)
     const validation = bookingSchema.safeParse(formData)
     
     if (!validation.success) {
@@ -57,7 +59,7 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
       // Simulated reCAPTCHA delay / submission lock
       await new Promise(resolve => setTimeout(resolve, 800))
       
-      await fetch(`${API_BASE_URL}/leads`, {
+      const res = await fetch(`${API_BASE_URL}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -66,11 +68,25 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
           message: vehicleName ? `Inquiry for ${vehicleName}. ${formData.message}` : formData.message,
         }),
       })
-    } catch (err) {
-      // Fallback
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(
+          errData.message ||
+            errData.error ||
+            "We couldn't submit your booking request — please retry or contact our concierge directly."
+        )
+      }
+
+      setSubmitted(true)
+    } catch (err: any) {
+      console.error('Booking submission error:', err)
+      setSubmitError(
+        err?.message ||
+          "We couldn't submit your booking request — please retry or contact our concierge directly at +971 4 888 9999."
+      )
     } finally {
       setLoading(false)
-      setSubmitted(true)
     }
   }
 
@@ -128,6 +144,12 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
                 aria-hidden="true"
                 className="absolute -left-[9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
               />
+
+              {submitError && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono leading-relaxed">
+                  {submitError}
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] uppercase tracking-widest font-mono text-[#7A7A7A] mb-1">Full Name *</label>
