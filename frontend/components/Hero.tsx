@@ -245,6 +245,7 @@ export default function Hero({ flagship, loading }: HeroProps) {
                 muted
                 loop
                 playsInline
+                preload="none"
                 poster={media.poster}
                 className="object-cover w-full h-full opacity-80 brightness-90"
               >

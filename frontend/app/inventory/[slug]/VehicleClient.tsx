@@ -13,10 +13,44 @@ import TrustBadges from './_components/TrustBadges'
 import ProvenanceStory from './_components/ProvenanceStory'
 import AcquisitionDesk from './_components/AcquisitionDesk'
 import EngineAudioPlayer from './_components/EngineAudioPlayer'
+import dynamic from 'next/dynamic'
 import RelatedVehicles from './_components/RelatedVehicles'
-import Exterior360Viewer from './_components/Exterior360Viewer'
-import Interior360Panorama from './_components/Interior360Panorama'
-import Vehicle3DStudio from './_components/Vehicle3DStudio'
+
+const Vehicle3DStudio = dynamic(() => import('./_components/Vehicle3DStudio'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[500px] sm:h-[600px] rounded-[32px] bg-[#0A0A0A] border border-white/10 flex flex-col items-center justify-center p-8 animate-pulse">
+      <div className="w-16 h-16 rounded-full border border-[#C9A227]/30 border-t-[#C9A227] animate-spin mb-4" />
+      <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#C9A227]">
+        Loading Interactive 3D Studio...
+      </span>
+    </div>
+  ),
+})
+
+const Exterior360Viewer = dynamic(() => import('./_components/Exterior360Viewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[450px] rounded-[32px] bg-[#0A0A0A] border border-white/10 flex flex-col items-center justify-center p-8 animate-pulse">
+      <div className="w-12 h-12 rounded-full border border-[#C9A227]/30 border-t-[#C9A227] animate-spin mb-4" />
+      <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#C9A227]">
+        Loading 360° Exterior Studio...
+      </span>
+    </div>
+  ),
+})
+
+const Interior360Panorama = dynamic(() => import('./_components/Interior360Panorama'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[450px] rounded-[32px] bg-[#0A0A0A] border border-white/10 flex flex-col items-center justify-center p-8 animate-pulse">
+      <div className="w-12 h-12 rounded-full border border-[#C9A227]/30 border-t-[#C9A227] animate-spin mb-4" />
+      <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#C9A227]">
+        Loading 360° Cockpit Panorama...
+      </span>
+    </div>
+  ),
+})
 
 interface VehicleClientProps {
   vehicle: Vehicle
