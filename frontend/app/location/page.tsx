@@ -63,6 +63,20 @@ export default function LocationPage() {
             className="opacity-80 hover:opacity-100 transition-opacity duration-500"
           ></iframe>
         )}
+        <noscript>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-[#0A0A0A]">
+            <p className="text-white font-serif text-lg mb-2">{showroomName} Flagship Showroom</p>
+            <p className="text-sm text-[#A0A0A0] mb-4 max-w-md">{address}</p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#C9A227] text-black font-mono text-xs uppercase tracking-widest font-bold"
+            >
+              Open in Google Maps
+            </a>
+          </div>
+        </noscript>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -125,9 +139,10 @@ export default function LocationPage() {
               WhatsApp Us
             </a>
             <a
-              href="https://maps.google.com"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="View showroom location on Google Maps"
               className="w-12 h-12 rounded-full border border-[rgba(255,255,255,0.1)] bg-black/30 flex items-center justify-center text-white hover:text-[#C9A227] hover:border-[#C9A227]/50 transition-colors"
             >
               <Navigation className="w-4 h-4" />

@@ -9,6 +9,7 @@ import Testimonials from '../components/Testimonials'
 import QuickSellBanner from '../components/QuickSellBanner'
 import BlogsSection from '../components/BlogsSection'
 import QualityAssuranceSection from '../components/QualityAssuranceSection'
+import BookingModal from '../components/BookingModal'
 import Link from 'next/link'
 import { Sparkles, ArrowRight, ShieldCheck, Award, Globe, Box, Loader2, PlayCircle, MapPin, Clock } from 'lucide-react'
 import { fetchVehiclesFromApi, fetchJournalsFromApi } from '../lib/api'
@@ -34,6 +35,7 @@ export default function HomeClient({ initialFeatured, initialArrivals, initialJo
   const [journals, setJournals] = useState<Journal[]>(initialJournals)
   const [totalInventory, setTotalInventory] = useState<number | null>(initialTotal)
   const [loading, setLoading] = useState(!hasServerData)
+  const [isVipModalOpen, setIsVipModalOpen] = useState(false)
 
   // Client-side fallback only when the server render had no data (e.g. the
   // API was unreachable during SSR) — never refetch over fresh server data.
@@ -172,7 +174,7 @@ export default function HomeClient({ initialFeatured, initialArrivals, initialJo
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
-                  onClick={() => toast('Opening Invitation Request Form...', 'info')}
+                  onClick={() => setIsVipModalOpen(true)}
                   className="h-14 px-8 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#9E7D1A] text-black font-mono font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_20px_rgba(201,162,39,0.3)] hover:shadow-[0_0_30px_rgba(201,162,39,0.5)]"
                 >
                   Request Invitation
@@ -324,6 +326,12 @@ export default function HomeClient({ initialFeatured, initialArrivals, initialJo
           ))}
         </div>
       </section>
+
+      <BookingModal
+        isOpen={isVipModalOpen}
+        onClose={() => setIsVipModalOpen(false)}
+        vehicleName="Apex Black Label VIP Access"
+      />
     </div>
   )
 }
