@@ -10,7 +10,7 @@ This operational manual is designed for showroom managers, sales concierges, acq
 3. [Google Sheets Inventory Synchronization](#3-google-sheets-inventory-synchronization)
 4. [VIP Leads, Viewing Bookings & Callback Desk](#4-vip-leads-viewing-bookings--callback-desk)
 5. [Sell-Your-Car Valuation Inbox](#5-sell-your-car-valuation-inbox)
-6. [FAQ Concierge Chatbot Knowledge Base](#6-faq-concierge-chatbot-knowledge-base)
+6. [FAQ Concierge Assistant Knowledge Base](#6-faq-concierge-assistant-knowledge-base)
 7. [Spare Parts Catalog & Journal Publishing](#7-spare-parts-catalog--journal-publishing)
 8. [Global Showroom Settings & WhatsApp Configuration](#8-global-showroom-settings--whatsapp-configuration)
 
@@ -113,9 +113,10 @@ Hypercar owners looking to consign or sell their automobiles outright submit spe
 
 ---
 
-## 6. FAQ Concierge Chatbot Knowledge Base
+## 6. FAQ Concierge Assistant Knowledge Base
+*(FAQ Concierge Chatbot Knowledge Base)*
 
-The public AI Concierge is a rule-based assistant strictly grounded in your showroom's official knowledge base. It never hallucinates unverified vehicle prices or terms.
+The public FAQ Concierge Assistant is a rule-based assistant strictly grounded in your showroom's official knowledge base. It never quotes unverified vehicle prices or terms.
 
 ### Managing Categories & Questions
 1. Navigate to **Admin → FAQ Knowledge Base**.

@@ -15,7 +15,7 @@ This memorandum provides formal verification and client sign-off documentation f
 Every identified audit defect, security recommendation, operational requirement, and performance optimization has been addressed with additive, test-proven implementations. All changes strictly adhered to non-breaking guarantees:
 - **Design System Integrity:** Zero alterations to the bespoke luxury design system (black/gold `#C9A227`, serif luxury typography, glassmorphism cards).
 - **Data Safety:** Zero column drops or destructive migrations; additive-only schema evolution.
-- **Feature Preservation:** All frozen core capabilities (3D Studio, 360° Panorama, FaqChatbot, Google Sheets synchronization, Asset DAM, Comparison Engine) continue functioning seamlessly.
+- **Feature Preservation:** All frozen core capabilities (3D Studio, 360° Panorama, FAQ Concierge Assistant (FaqChatbot), Google Sheets synchronization, Asset DAM, Comparison Engine) continue functioning seamlessly.
 - **Verification Proof:** Every work package includes automated verification tests ensuring end-to-end reliability.
 
 ---
