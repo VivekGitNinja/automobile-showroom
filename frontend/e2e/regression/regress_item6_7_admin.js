@@ -1,4 +1,9 @@
 const { chromium } = require('@playwright/test');
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.resolve(__dirname, '../../../api/.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env.local') });
 
 async function testAdminLoginAndTabs() {
   const browser = await chromium.launch({ headless: true });
@@ -18,8 +23,13 @@ async function testAdminLoginAndTabs() {
 
   if (await emailInput.count() > 0) {
     console.log('Admin login form displayed. Entering credentials...');
-    await emailInput.fill('admin@apex.ae');
-    await passwordInput.fill('zojgWBXZdARzCorN8nwa');
+    const email = process.env.E2E_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@apex.ae';
+    const password = process.env.E2E_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+    if (!password) {
+      throw new Error('E2E_ADMIN_PASSWORD or ADMIN_PASSWORD required in environment');
+    }
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
     await page.click('main form button[type="submit"]');
     await page.waitForTimeout(3000);
   }

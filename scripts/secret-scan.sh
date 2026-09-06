@@ -35,7 +35,7 @@ check_pattern() {
 }
 
 # 1. Check known historical or hardcoded password constants
-check_pattern "Hardcoded admin password constants" "zojgWBXZdARzCorN8nwa"
+check_pattern "Hardcoded admin password constants" "zojgWBXZdARzCorN8nwa" "scripts/secret-scan\.sh"
 
 # 2. Check for tracked .env files
 ENV_TRACKED=$(git ls-files | grep -E "(^|/)\.env(\.local|\.production|\.development)?$" || true)
