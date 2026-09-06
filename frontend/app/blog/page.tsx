@@ -1,24 +1,24 @@
-'use client'
-
-import React, { useEffect, useState } from 'react'
+import type { Metadata } from 'next'
 import BlogsSection from '../../components/BlogsSection'
+import { fetchJournalsFromApi } from '../../lib/api'
 import { Journal } from '../../lib/types'
+import { SITE_URL } from '../../lib/site'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
+export const revalidate = 300
 
-export default function BlogListingPage() {
-  const [journals, setJournals] = useState<Journal[]>([])
+export const metadata: Metadata = {
+  title: 'The Apex Journal — Automotive Intelligence & Supercar Heritage',
+  description: 'Market intelligence, buying guides and collection news from Dubai\'s premier ultra-luxury automobile showroom.',
+  alternates: { canonical: `${SITE_URL}/blog` },
+}
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/journals`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.data) {
-          setJournals(data.data)
-        }
-      })
-      .catch(err => console.error("Error fetching journals:", err))
-  }, [])
+export default async function BlogListingPage() {
+  let journals: Journal[] = []
+  try {
+    journals = await fetchJournalsFromApi()
+  } catch (error) {
+    console.error('Failed to fetch journals for blog listing', error)
+  }
 
   return (
     <main className="bg-[#030303] min-h-screen text-white pt-24">

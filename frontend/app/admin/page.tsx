@@ -11,8 +11,10 @@ import LeadsViewer from './_components/LeadsViewer'
 import SyncLogViewer from './_components/SyncLogViewer'
 import PartsManager from './_components/PartsManager'
 import JournalManager from './_components/JournalManager'
+import SellCarInbox from './_components/SellCarInbox'
 import AssetManagerModal from './_components/AssetManagerModal'
 import { motion, AnimatePresence } from 'framer-motion'
+import { adminFetch, startSessionKeeper, clearAdminSession, setAdminSession } from '../../lib/adminFetch'
 
 export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -24,7 +26,7 @@ export default function AdminDashboardPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'inventory' | 'leads' | 'parts' | 'journal' | 'dam' | 'sync' | 'settings'>('inventory')
+  const [activeTab, setActiveTab] = useState<'inventory' | 'leads' | 'acquisition' | 'parts' | 'journal' | 'dam' | 'sync' | 'settings'>('inventory')
   
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false)
   const [selectedVehicleForAssets, setSelectedVehicleForAssets] = useState<Vehicle | null>(null)
@@ -48,6 +50,9 @@ export default function AdminDashboardPage() {
       setIsAuthenticated(true)
       fetchData()
     }
+    // Proactively rotate the access token so staff are never logged out
+    // mid-session (access tokens live 15 minutes).
+    return startSessionKeeper()
   }, [])
 
   const fetchData = async () => {
@@ -55,8 +60,8 @@ export default function AdminDashboardPage() {
     const token = localStorage.getItem('adminToken')
     try {
       const [vehiclesRes, leadsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/admin/vehicles`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/admin/leads`, { headers: { 'Authorization': `Bearer ${token}` } })
+        adminFetch(`${API_BASE_URL}/admin/vehicles`),
+        adminFetch(`${API_BASE_URL}/admin/leads`)
       ])
       
       if (vehiclesRes.ok) {
@@ -68,9 +73,9 @@ export default function AdminDashboardPage() {
         setLeads(lData.data || [])
       }
       // Real DAM storage configuration (local disk vs S3/R2)
-      fetch(`${API_BASE_URL}/admin/media/status`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d?.provider) setMediaProvider(d.provider) })
+      adminFetch(`${API_BASE_URL}/admin/media/status`)
+        .then((r: Response) => (r.ok ? r.json() : null))
+        .then((d: any) => { if (d?.provider) setMediaProvider(d.provider) })
         .catch(() => {})
     } catch (err) {
       console.error(err)
@@ -83,15 +88,14 @@ export default function AdminDashboardPage() {
     e.preventDefault()
     setLoginError('')
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      const res = await adminFetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
       const data = await res.json()
       if (res.ok && data.accessToken) {
-        localStorage.setItem('adminToken', data.accessToken)
-        document.cookie = 'admin-token=' + data.accessToken + ';path=/;max-age=86400'
+        setAdminSession(data.accessToken, data.refreshToken)
         setIsAuthenticated(true)
         fetchData()
       } else {
@@ -103,8 +107,7 @@ export default function AdminDashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken')
-    document.cookie = 'admin-token=;path=/;max-age=0'
+    clearAdminSession()
     setIsAuthenticated(false)
   }
 
@@ -114,7 +117,7 @@ export default function AdminDashboardPage() {
     setSyncLog((prev) => [`[${timestamp}] Initiated Google Sheets sync worker...`, ...prev])
 
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` } })
+      const res = await adminFetch(`${API_BASE_URL}/admin/sync`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
         setSyncLog((prev) => [
@@ -146,9 +149,9 @@ export default function AdminDashboardPage() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/vehicles/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ status: newStatus })
       })
       if (res.ok) fetchData()
@@ -159,9 +162,9 @@ export default function AdminDashboardPage() {
 
   const handleToggleFeatured = async (id: string, currentFeatured: boolean) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/vehicles/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ isFeatured: !currentFeatured })
       })
       if (res.ok) fetchData()
@@ -173,9 +176,9 @@ export default function AdminDashboardPage() {
   const handleDeleteVehicle = async (id: string) => {
     if (!confirm('Are you sure you want to delete this vehicle?')) return
     try {
-      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/vehicles/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: {}
       })
       if (res.ok) fetchData()
     } catch (err) {
@@ -305,7 +308,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex bg-[#0A0A0A] border border-white/10 rounded-full p-1">
-               {(['inventory', 'leads', 'parts', 'journal', 'dam', 'sync', 'settings'] as const).map(tab => (
+               {(['inventory', 'leads', 'acquisition', 'parts', 'journal', 'dam', 'sync', 'settings'] as const).map(tab => (
                  <button 
                    key={tab}
                    onClick={() => setActiveTab(tab)}
@@ -502,6 +505,12 @@ export default function AdminDashboardPage() {
           {activeTab === 'leads' && (
             <motion.div key="leads" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <LeadsViewer />
+            </motion.div>
+          )}
+
+          {activeTab === 'acquisition' && (
+            <motion.div key="acquisition" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <SellCarInbox />
             </motion.div>
           )}
 

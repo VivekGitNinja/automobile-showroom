@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { X, UploadCloud, Loader2, Plus, Trash2 } from 'lucide-react'
 import { API_BASE_URL } from '../lib/api'
 import { useToast } from '../lib/useToast'
+import { adminFetch } from '../lib/adminFetch'
 
 interface AddVehicleModalProps {
   isOpen: boolean
@@ -58,11 +59,10 @@ export default function AddVehicleModal({ isOpen, onClose, onSuccess }: AddVehic
         sounds
       }
 
-      const res = await fetch(`${API_BASE_URL}/vehicles`, {
+      const res = await adminFetch(`${API_BASE_URL}/vehicles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+        body: JSON.stringify(payload)})
       if (res.ok) {
         toast('Vehicle added successfully!', 'success')
         onSuccess()

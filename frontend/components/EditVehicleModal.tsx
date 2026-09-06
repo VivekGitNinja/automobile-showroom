@@ -5,6 +5,7 @@ import { X, UploadCloud, Loader2, Plus, Trash2 } from 'lucide-react'
 import { API_BASE_URL } from '../lib/api'
 import { useToast } from '../lib/useToast'
 import { Vehicle } from '../lib/types'
+import { adminFetch } from '../lib/adminFetch'
 
 interface EditVehicleModalProps {
   vehicle: Vehicle | null
@@ -92,14 +93,11 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
         sounds
       }
 
-      const res = await fetch(`${API_BASE_URL}/vehicles/${vehicle.id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/vehicles/${vehicle.id}`, {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
-        body: JSON.stringify(payload),
-      })
+          'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)})
       if (res.ok) {
         toast('Vehicle updated successfully!', 'success')
         onSuccess()

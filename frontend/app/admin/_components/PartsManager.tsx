@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Loader2, Plus, Pencil, Trash2, Package, X } from 'lucide-react'
 import { Part, PartCategory } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 const EMPTY_FORM = {
   name: '',
@@ -17,8 +18,7 @@ const EMPTY_FORM = {
   currency: 'AED',
   stockQty: '0',
   imageUrl: '',
-  status: 'DRAFT',
-}
+  status: 'DRAFT'}
 
 export default function PartsManager() {
   const [parts, setParts] = useState<Part[]>([])
@@ -31,16 +31,14 @@ export default function PartsManager() {
   const [error, setError] = useState('')
 
   const authHeaders = () => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
-  })
+    'Content-Type': 'application/json'})
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const [pRes, cRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/parts/admin/all?limit=200`, { headers: authHeaders() }),
-        fetch(`${API_BASE_URL}/parts/categories`),
+        adminFetch(`${API_BASE_URL}/parts/admin/all?limit=200`, { headers: authHeaders() }),
+        adminFetch(`${API_BASE_URL}/parts/categories`),
       ])
       if (pRes.ok) setParts((await pRes.json()).data || [])
       if (cRes.ok) setCategories((await cRes.json()).data || [])
@@ -72,8 +70,7 @@ export default function PartsManager() {
       currency: part.currency || 'AED',
       stockQty: String(part.stockQty),
       imageUrl: part.imageUrl || '',
-      status: part.status || 'DRAFT',
-    })
+      status: part.status || 'DRAFT'})
     setError('')
     setModalOpen(true)
   }
@@ -97,11 +94,10 @@ export default function PartsManager() {
         currency: form.currency || 'AED',
         stockQty: Number(form.stockQty) || 0,
         imageUrl: form.imageUrl || null,
-        status: form.status,
-      }
+        status: form.status}
       const res = editing
-        ? await fetch(`${API_BASE_URL}/parts/${editing.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload) })
-        : await fetch(`${API_BASE_URL}/parts`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) })
+        ? await adminFetch(`${API_BASE_URL}/parts/${editing.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload) })
+        : await adminFetch(`${API_BASE_URL}/parts`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) })
       if (res.ok) {
         setModalOpen(false)
         fetchData()
@@ -116,10 +112,9 @@ export default function PartsManager() {
 
   const handleDelete = async (part: Part) => {
     if (!confirm(`Delete "${part.name}" (${part.sku})? This cannot be undone.`)) return
-    const res = await fetch(`${API_BASE_URL}/parts/${part.id}`, {
+    const res = await adminFetch(`${API_BASE_URL}/parts/${part.id}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
-    })
+      headers: {}})
     if (res.ok) fetchData()
     else alert('Delete failed — the part may not exist.')
   }

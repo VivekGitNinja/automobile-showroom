@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Lock, Key } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { API_BASE_URL } from '../../../lib/api'
+import { setAdminSession } from '../../../lib/adminFetch'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -21,8 +22,9 @@ export default function AdminLoginPage() {
       })
       const data = await res.json()
       if (res.ok && data.accessToken) {
-        localStorage.setItem('adminToken', data.accessToken)
-        document.cookie = 'admin-token=' + data.accessToken + ';path=/;max-age=86400'
+        // Stores access token + refresh token (used for silent renewal) and
+        // syncs the middleware-validated cookie
+        setAdminSession(data.accessToken, data.refreshToken)
         // Hard navigation: the client router may hold a pre-login redirect
         // for /admin in its cache, which would swallow router.push.
         window.location.assign('/admin')

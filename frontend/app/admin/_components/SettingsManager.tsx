@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Save, Loader2, Link2, MapPin, Phone, Mail, Clock, ShieldCheck } from 'lucide-react'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 export default function SettingsManager() {
   const [loading, setLoading] = useState(true)
@@ -16,7 +17,7 @@ export default function SettingsManager() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/settings`)
+      const res = await adminFetch(`${API_BASE_URL}/settings`)
       const data = await res.json()
       setSettings(data.data || {
         showroomName: 'Apex Luxury Automobiles',
@@ -55,12 +56,10 @@ export default function SettingsManager() {
     const token = localStorage.getItem('adminToken')
 
     try {
-      const res = await fetch(`${API_BASE_URL}/settings`, {
+      const res = await adminFetch(`${API_BASE_URL}/settings`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(settings)
       })
 

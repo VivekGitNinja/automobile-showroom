@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Edit, Trash, MessageSquare, Loader2, X } from 'lucide-react'
 import { FaqCategory, FaqItem } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 export default function FAQAdminPage() {
   const [categories, setCategories] = useState<FaqCategory[]>([])
@@ -31,7 +32,7 @@ export default function FAQAdminPage() {
   const fetchFaqs = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/faqs`)
+      const res = await adminFetch(`${API_BASE_URL}/faqs`)
       const data = await res.json()
       if (data.data) {
         setCategories(data.data)
@@ -59,9 +60,7 @@ export default function FAQAdminPage() {
       const res = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(categoryForm)
       })
 
@@ -79,9 +78,9 @@ export default function FAQAdminPage() {
     if (!confirm('Are you sure you want to delete this category? All related FAQs will be lost.')) return
     
     try {
-      const res = await fetch(`${API_BASE_URL}/faq-categories/${id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/faq-categories/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        headers: {}
       })
       if (!res.ok) throw new Error('API failed')
       
@@ -108,9 +107,7 @@ export default function FAQAdminPage() {
       const res = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
       })
 
@@ -128,9 +125,9 @@ export default function FAQAdminPage() {
     if (!confirm('Are you sure you want to delete this FAQ?')) return
     
     try {
-      const res = await fetch(`${API_BASE_URL}/faqs/${id}`, {
+      const res = await adminFetch(`${API_BASE_URL}/faqs/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        headers: {}
       })
       if (!res.ok) throw new Error('API failed')
       

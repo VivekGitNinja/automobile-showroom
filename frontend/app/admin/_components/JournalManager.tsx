@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Loader2, Plus, Pencil, Trash2, BookOpen, X } from 'lucide-react'
 import { Journal } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 const EMPTY_FORM = {
   title: '',
@@ -12,8 +13,7 @@ const EMPTY_FORM = {
   content: '',
   imageUrl: '',
   readTime: '5 min read',
-  status: 'DRAFT',
-}
+  status: 'DRAFT'}
 
 export default function JournalManager() {
   const [posts, setPosts] = useState<Journal[]>([])
@@ -25,14 +25,12 @@ export default function JournalManager() {
   const [error, setError] = useState('')
 
   const authHeaders = () => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
-  })
+    'Content-Type': 'application/json'})
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/journals`, { headers: authHeaders() })
+      const res = await adminFetch(`${API_BASE_URL}/admin/journals`, { headers: authHeaders() })
       if (res.ok) setPosts((await res.json()).data || [])
     } finally {
       setLoading(false)
@@ -57,8 +55,7 @@ export default function JournalManager() {
       content: post.content || '',
       imageUrl: post.imageUrl,
       readTime: post.readTime,
-      status: post.status || 'DRAFT',
-    })
+      status: post.status || 'DRAFT'})
     setError('')
     setModalOpen(true)
   }
@@ -75,11 +72,10 @@ export default function JournalManager() {
         content: form.content || undefined,
         imageUrl: form.imageUrl,
         readTime: form.readTime || '5 min read',
-        status: form.status,
-      }
+        status: form.status}
       const res = editing
-        ? await fetch(`${API_BASE_URL}/admin/journals/${editing.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload) })
-        : await fetch(`${API_BASE_URL}/admin/journals`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) })
+        ? await adminFetch(`${API_BASE_URL}/admin/journals/${editing.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload) })
+        : await adminFetch(`${API_BASE_URL}/admin/journals`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) })
       if (res.ok) {
         setModalOpen(false)
         fetchPosts()
@@ -94,10 +90,9 @@ export default function JournalManager() {
 
   const handleDelete = async (post: Journal) => {
     if (!confirm(`Delete "${post.title}"? This cannot be undone.`)) return
-    const res = await fetch(`${API_BASE_URL}/admin/journals/${post.id}`, {
+    const res = await adminFetch(`${API_BASE_URL}/admin/journals/${post.id}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
-    })
+      headers: {}})
     if (res.ok) fetchPosts()
     else alert('Delete failed.')
   }

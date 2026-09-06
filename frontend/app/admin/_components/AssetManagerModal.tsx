@@ -5,6 +5,7 @@ import { X, UploadCloud, Loader2, Image as ImageIcon, Box, Volume2, CheckCircle 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Vehicle } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 interface AssetManagerModalProps {
   vehicle: Vehicle | null
@@ -37,11 +38,9 @@ export default function AssetManagerModal({ vehicle, isOpen, onClose, onSuccess 
     formData.append('assetType', assetType)
 
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/vehicles/${vehicle.id}/upload-asset`, {
+      const res = await adminFetch(`${API_BASE_URL}/admin/vehicles/${vehicle.id}/upload-asset`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        },
+        headers: {},
         body: formData
       })
       const data = await res.json()
