@@ -172,7 +172,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-mono text-[#C9A227] uppercase tracking-[0.3em] font-bold">{vehicle.make}</span>
             <span className="w-1 h-1 rounded-full bg-white/20"></span>
-            <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-[0.2em]">{vehicle.year}</span>
+            <span className="text-[10px] font-mono text-[#A0A0A0] uppercase tracking-[0.2em]">{vehicle.year}</span>
           </div>
           
           <h3 className="text-3xl font-serif font-bold text-white group-hover:gold-gradient-text transition-all duration-500 leading-tight mb-1">

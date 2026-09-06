@@ -164,17 +164,17 @@ export default function Footer() {
           
           <div className="flex gap-4">
             {settings?.socialLinks?.twitter && (
-              <a href={settings.socialLinks.twitter} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+              <a href={settings.socialLinks.twitter} target="_blank" rel="noreferrer" aria-label="Visit Apex on Twitter" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
                 <Twitter className="w-3.5 h-3.5" />
               </a>
             )}
             {settings?.socialLinks?.instagram && (
-              <a href={settings.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+              <a href={settings.socialLinks.instagram} target="_blank" rel="noreferrer" aria-label="Visit Apex on Instagram" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
                 <Instagram className="w-3.5 h-3.5" />
               </a>
             )}
             {settings?.socialLinks?.facebook && (
-              <a href={settings.socialLinks.facebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
+              <a href={settings.socialLinks.facebook} target="_blank" rel="noreferrer" aria-label="Visit Apex on Facebook" className="w-8 h-8 rounded-full glass-panel border border-white/10 flex items-center justify-center hover:bg-[#C9A227] hover:border-[#C9A227] hover:text-black hover:scale-110 transition-all duration-300 text-white">
                 <Facebook className="w-3.5 h-3.5" />
               </a>
             )}

@@ -75,8 +75,10 @@ export default function ComparisonWidget() {
           {/* Vehicle A Card */}
           <div className="lg:col-span-5 p-8 rounded-3xl glass-panel border border-[rgba(255,255,255,0.08)] space-y-6 luxury-card-hover">
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-[#C9A227] uppercase tracking-widest block">Select Vehicle A</label>
+              <label htmlFor="compare-vehicle-a" className="text-[10px] font-mono text-[#C9A227] uppercase tracking-widest block">Select Vehicle A</label>
               <select
+                id="compare-vehicle-a"
+                aria-label="Select Vehicle A"
                 value={vehicleA?.id || ''}
                 onChange={(e) => setVehicleA(vehicles.find((v) => v.id === e.target.value) || vehicles[0])}
                 className="w-full px-4 py-3 rounded-xl bg-[#0E0E0E] border border-[rgba(255,255,255,0.12)] text-white font-serif font-bold text-lg focus:outline-none focus:border-[#C9A227]"
@@ -120,8 +122,10 @@ export default function ComparisonWidget() {
           {/* Vehicle B Card */}
           <div className="lg:col-span-5 p-8 rounded-3xl glass-panel border border-[rgba(255,255,255,0.08)] space-y-6 luxury-card-hover">
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-[#C9A227] uppercase tracking-widest block">Select Vehicle B</label>
+              <label htmlFor="compare-vehicle-b" className="text-[10px] font-mono text-[#C9A227] uppercase tracking-widest block">Select Vehicle B</label>
               <select
+                id="compare-vehicle-b"
+                aria-label="Select Vehicle B"
                 value={vehicleB?.id || ''}
                 onChange={(e) => setVehicleB(vehicles.find((v) => v.id === e.target.value) || vehicles[1])}
                 className="w-full px-4 py-3 rounded-xl bg-[#0E0E0E] border border-[rgba(255,255,255,0.12)] text-white font-serif font-bold text-lg focus:outline-none focus:border-[#C9A227]"

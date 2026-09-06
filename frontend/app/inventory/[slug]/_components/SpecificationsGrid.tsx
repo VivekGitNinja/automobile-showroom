@@ -138,7 +138,7 @@ export default function SpecificationsGrid({ vehicle }: SpecificationsGridProps)
           <div className="font-serif font-bold text-2xl sm:text-3xl text-white">
             1,600 HP
           </div>
-          <span className="text-[10px] font-mono text-white/40 block mt-1">W16 Quad-Turbo</span>
+          <span className="text-[10px] font-mono text-[#A0A0A0] block mt-1">W16 Quad-Turbo</span>
         </div>
 
         <div className="bg-[#080808] border border-[#C9A227]/30 p-6 rounded-2xl text-center shadow-lg">
@@ -148,7 +148,7 @@ export default function SpecificationsGrid({ vehicle }: SpecificationsGridProps)
           <div className="font-serif font-bold text-2xl sm:text-3xl text-white">
             440 KM/H
           </div>
-          <span className="text-[10px] font-mono text-white/40 block mt-1">Electronically Limited</span>
+          <span className="text-[10px] font-mono text-[#A0A0A0] block mt-1">Electronically Limited</span>
         </div>
 
         <div className="bg-[#080808] border border-[#C9A227]/30 p-6 rounded-2xl text-center shadow-lg">
@@ -158,7 +158,7 @@ export default function SpecificationsGrid({ vehicle }: SpecificationsGridProps)
           <div className="font-serif font-bold text-2xl sm:text-3xl text-white">
             2.4 SEC
           </div>
-          <span className="text-[10px] font-mono text-white/40 block mt-1">0–100 km/h</span>
+          <span className="text-[10px] font-mono text-[#A0A0A0] block mt-1">0–100 km/h</span>
         </div>
 
         <div className="bg-[#080808] border border-[#C9A227]/30 p-6 rounded-2xl text-center shadow-lg">
@@ -168,7 +168,7 @@ export default function SpecificationsGrid({ vehicle }: SpecificationsGridProps)
           <div className="font-serif font-bold text-2xl sm:text-3xl text-white">
             1,600 NM
           </div>
-          <span className="text-[10px] font-mono text-white/40 block mt-1">2,200–7,000 RPM</span>
+          <span className="text-[10px] font-mono text-[#A0A0A0] block mt-1">2,200–7,000 RPM</span>
         </div>
       </div>
 

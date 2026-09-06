@@ -67,7 +67,7 @@ export default function AcquisitionDesk({ vehicle, onBookViewing, onFinance, onR
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Ready For Immediate Delivery
           </span>
-          <span className="hidden sm:inline-block text-white/40">·</span>
+          <span className="hidden sm:inline-block text-[#A0A0A0]">·</span>
           <span className="hidden sm:inline-block text-white/60">Dubai Showroom Inventory</span>
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function AcquisitionDesk({ vehicle, onBookViewing, onFinance, onR
           <div className="text-3xl sm:text-4xl font-mono font-bold text-white">
             {formattedPrice}
           </div>
-          <span className="text-[11px] font-mono text-white/40 mt-1">
+          <span className="text-[11px] font-mono text-[#A0A0A0] mt-1">
             Excluding GCC Export Tax & International Freight
           </span>
         </div>

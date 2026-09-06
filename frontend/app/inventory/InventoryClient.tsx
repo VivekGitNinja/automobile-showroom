@@ -263,6 +263,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
             <div className="relative pt-3">
               <input
                 type="range"
+                aria-label="Maximum price in AED"
                 min={1000000}
                 max={20000000}
                 step={500000}
@@ -300,6 +301,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
             <label className="block uppercase text-[#7A7A7A] mb-2">Fuel Type</label>
             <div className="relative">
               <select
+                aria-label="Filter by fuel type"
                 value={selectedFuel}
                 onChange={(e) => {
                   setSelectedFuel(e.target.value)
@@ -321,6 +323,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
             <label className="block uppercase text-[#7A7A7A] mb-2">Transmission</label>
             <div className="relative">
               <select
+                aria-label="Filter by transmission"
                 value={selectedTransmission}
                 onChange={(e) => {
                   setSelectedTransmission(e.target.value)
@@ -342,6 +345,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
             <label className="block uppercase text-[#7A7A7A] mb-2">Year From</label>
             <div className="relative">
               <select
+                aria-label="Filter by minimum year"
                 value={selectedMinYear || 'All'}
                 onChange={(e) => {
                   const val = e.target.value === 'All' ? 0 : Number(e.target.value)
@@ -365,6 +369,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
             <div className="relative">
               <ArrowDownUp className="w-4 h-4 text-white/50 absolute left-4 top-1/2 -translate-y-1/2" />
               <select
+                aria-label="Sort inventory"
                 value={selectedSort}
                 onChange={(e) => {
                   setSelectedSort(e.target.value)

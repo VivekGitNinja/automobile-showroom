@@ -365,9 +365,11 @@ export default function Hero({ flagship, loading }: HeroProps) {
             
             <form onSubmit={handleQuickSearch} className="space-y-5 relative z-10">
               <div className="relative group/input">
-                <label className="block text-[10px] uppercase font-mono tracking-widest text-[#7A7A7A] mb-2 group-focus-within/input:text-[#C9A227] transition-colors">Marque</label>
+                <label htmlFor="hero-search-marque" className="block text-[10px] uppercase font-mono tracking-widest text-[#7A7A7A] mb-2 group-focus-within/input:text-[#C9A227] transition-colors">Marque</label>
                 <div className="relative">
                   <select 
+                    id="hero-search-marque"
+                    aria-label="Select marque"
                     value={searchMake}
                     onChange={(e) => setSearchMake(e.target.value)}
                     className="w-full bg-[#0A0A0A]/80 border border-white/10 text-white text-sm rounded-xl px-5 py-4 appearance-none focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner"

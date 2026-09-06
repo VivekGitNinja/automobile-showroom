@@ -192,8 +192,10 @@ export default function QuickSellBanner() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div className="group/input">
-                        <label className="block text-[#7A7A7A] uppercase text-[9px] tracking-[0.2em] mb-2 group-focus-within/input:text-[#C9A227] transition-colors">Production Year</label>
+                        <label htmlFor="quick-sell-year" className="block text-[#7A7A7A] uppercase text-[9px] tracking-[0.2em] mb-2 group-focus-within/input:text-[#C9A227] transition-colors">Production Year</label>
                         <select
+                          id="quick-sell-year"
+                          aria-label="Production Year"
                           value={year}
                           onChange={(e) => setYear(e.target.value)}
                           className="w-full px-5 py-4 rounded-xl bg-black border border-white/10 text-white focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/50 transition-all shadow-inner appearance-none"

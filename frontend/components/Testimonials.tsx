@@ -124,7 +124,7 @@ export default function Testimonials() {
                   <div>
                     <h4 className="font-serif font-bold text-white text-xl mb-1">{reviews[activeIndex].name}</h4>
                     <p className="text-xs text-[#C9A227] font-mono tracking-widest uppercase mb-1">{reviews[activeIndex].car}</p>
-                    <span className="text-[10px] text-[#7A7A7A] font-mono uppercase tracking-[0.2em]">{reviews[activeIndex].title}</span>
+                    <span className="text-[10px] text-[#A0A0A0] font-mono uppercase tracking-[0.2em]">{reviews[activeIndex].title}</span>
                   </div>
                 </div>
 
