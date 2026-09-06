@@ -62,6 +62,7 @@ else
 fi
 [ -n "${JWT_ACCESS_SECRET:-}" ] && [ ${#JWT_ACCESS_SECRET} -ge 32 ] && ok "JWT secrets" "configured" || bad "JWT_ACCESS_SECRET" "missing or < 32 chars"
 grep -q "^JWT_ACCESS_SECRET=" "$(dirname "$0")/../frontend/.env.local" 2>/dev/null && ok "Frontend JWT" "cookie middleware secret present" || bad "Frontend JWT" "frontend/.env.local missing JWT_ACCESS_SECRET (admin login will fail closed)"
+bash "$(dirname "$0")/secret-scan.sh" >/dev/null 2>&1 && ok "Secret scan" "0 leaks in tracked files" || bad "Secret scan" "credentials found in git index"
 
 # ── 3. Lead notifications (SendGrid) ───────────────────────────────────────
 head "3 · LEAD NOTIFICATIONS"
