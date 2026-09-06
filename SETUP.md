@@ -72,10 +72,15 @@ Sync is in safe mode until credentials are set (it will never seed demo data).
    `https://docs.google.com/spreadsheets/d/`**`<THIS PART>`**`/edit`
 7. Put in `api/.env`:
    ```env
-   GOOGLE_SHEET_ID=<spreadsheet id>
-   GOOGLE_SHEET_NAME=Inventory        # exact tab name, default "Inventory"
+   # Option A: Service Account Email + Private Key
+   GOOGLE_SHEET_ID=<spreadsheet id>                     # alias: GOOGLE_SPREADSHEET_ID
+   GOOGLE_SHEET_NAME=Inventory                          # exact tab name, default "Inventory"
    GOOGLE_SERVICE_ACCOUNT_EMAIL=sync-bot@your-project.iam.gserviceaccount.com
-   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n" # alias: GOOGLE_PRIVATE_KEY
+
+   # Option B: Full Service Account JSON (raw string or base64)
+   # GOOGLE_SHEET_ID=<spreadsheet id>
+   # GOOGLE_SERVICE_ACCOUNT_JSON='{"type": "service_account", ...}'
    ```
    (keep the quotes around the private key; the `\n` escapes are fine)
 8. Sheet columns (row 1 can be headers, sync reads from row 2):

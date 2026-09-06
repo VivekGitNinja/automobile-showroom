@@ -16,10 +16,14 @@ const envSchema = z.object({
   AWS_REGION:                  z.string().default('us-east-1'),
   S3_BUCKET:                   z.string().default('showroom-vehicles-media'),
   CDN_BASE_URL:                z.string().default('http://localhost:4000'),
-  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(), // Using optional to not completely break dev instantly if sheet integration isn't used
-  GOOGLE_SPREADSHEET_ID:       z.string().optional(),
-  GOOGLE_SHEET_NAME:           z.string().default('Sheet1'),
-  SYNC_CRON_SCHEDULE:          z.string().default('*/15 * * * *'),
+  GOOGLE_SERVICE_ACCOUNT_JSON:        z.string().optional(), // Using optional to not completely break dev instantly if sheet integration isn't used
+  GOOGLE_SPREADSHEET_ID:              z.string().optional(),
+  GOOGLE_SHEET_ID:                     z.string().optional(),
+  GOOGLE_SHEET_NAME:                  z.string().default('Sheet1'),
+  GOOGLE_SERVICE_ACCOUNT_EMAIL:       z.string().optional(),
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
+  GOOGLE_PRIVATE_KEY:                 z.string().optional(),
+  SYNC_CRON_SCHEDULE:                 z.string().default('*/15 * * * *'),
   REVALIDATE_SECRET:           z.string().default('default-revalidate-secret-32-char-string'),
   REVALIDATE_URL:              z.string().default('http://localhost:3000/api/revalidate'),
   APP_VERSION:                 z.string().default('1.0.0'),

@@ -81,10 +81,11 @@ function resolveCredentials(): {
     }
   }
 
-  if (!credentials && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY
+  if (!credentials && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && privateKey) {
     credentials = {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      private_key: privateKey.replace(/\\n/g, '\n'),
     }
   }
 
