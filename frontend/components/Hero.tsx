@@ -300,6 +300,7 @@ export default function Hero({ flagship, loading }: HeroProps) {
           onClick={() => setIsMuted(!isMuted)}
           className="p-2.5 rounded-full glass-panel hover:border-[#C9A227]/50 text-white transition-colors"
           title={isMuted ? "Unmute Engine Audio" : "Mute Engine Audio"}
+          aria-label={isMuted ? "Unmute Engine Audio" : "Mute Engine Audio"}
         >
           {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-[#C9A227]" />}
         </button>
@@ -414,6 +415,7 @@ export default function Hero({ flagship, loading }: HeroProps) {
           <button 
             onClick={prevMedia} 
             className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-white hover:border-[#C9A227] transition-colors"
+            aria-label="Previous slide"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -433,6 +435,7 @@ export default function Hero({ flagship, loading }: HeroProps) {
                     : 'w-2 bg-white/30 hover:bg-white/60'
                 }`}
                 title={m.title}
+                aria-label={`Go to slide ${idx + 1}: ${m.title}`}
               />
             ))}
           </div>
@@ -440,6 +443,7 @@ export default function Hero({ flagship, loading }: HeroProps) {
           <button 
             onClick={nextMedia} 
             className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-white hover:border-[#C9A227] transition-colors"
+            aria-label="Next slide"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

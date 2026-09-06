@@ -37,7 +37,8 @@ export default function PartEnquiry({ partName, partSku }: { partName: string; p
         setSubmitted('Enquiry received — our parts desk will contact you shortly.')
       } else {
         const data = await res.json().catch(() => ({}))
-        setError(data.error || 'Submission failed. Please try WhatsApp or call us directly.')
+        const msg = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Submission failed. Please try WhatsApp or call us directly.'
+        setError(msg)
       }
     } catch {
       setError('Network error. Please try WhatsApp or call us directly.')

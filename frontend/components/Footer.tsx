@@ -92,7 +92,7 @@ export default function Footer() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="flex-1 bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white placeholder-white/30 focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/30 transition-all shadow-inner"
                   />
-                  <button type="submit" disabled={loading} className="w-12 shrink-0 bg-gradient-to-r from-[#D4AF37] to-[#9E7D1A] rounded-xl flex items-center justify-center hover:brightness-110 transition-all shadow-[0_0_15px_rgba(201,162,39,0.3)] group disabled:opacity-50">
+                  <button type="submit" disabled={loading} aria-label="Subscribe to The Collection newsletter" className="w-12 shrink-0 bg-gradient-to-r from-[#D4AF37] to-[#9E7D1A] rounded-xl flex items-center justify-center hover:brightness-110 transition-all shadow-[0_0_15px_rgba(201,162,39,0.3)] group disabled:opacity-50">
                     {loading ? <Loader2 className="w-4 h-4 text-black animate-spin" /> : <ArrowRight className="w-4 h-4 text-black group-hover:translate-x-1 transition-transform" />}
                   </button>
                 </form>

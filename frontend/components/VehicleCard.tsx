@@ -124,14 +124,23 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
           <button 
             onClick={handlePlaySound} 
             title={`Listen to ${vehicle.make} ${vehicle.model} Engine Sound`}
+            aria-label={`Listen to ${vehicle.make} ${vehicle.model} engine sound`}
             className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${isRevving ? 'bg-[#C9A227] border-[#C9A227] text-black shadow-[0_0_20px_rgba(201,162,39,0.8)] scale-110' : 'bg-black/60 border-[#C9A227]/40 text-[#C9A227] hover:bg-[#C9A227] hover:text-black'}`}
           >
             {isRevving ? <Activity className="w-4 h-4 animate-pulse" /> : <Volume2 className="w-4 h-4" />}
           </button>
-          <button onClick={handleWishlist} className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${isWishlisted ? 'bg-red-500/20 border-red-500 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-black/40 border-white/10 text-white hover:text-red-500 hover:border-red-500/50'}`}>
+          <button 
+            onClick={handleWishlist} 
+            aria-label={isWishlisted ? `Remove ${vehicle.make} ${vehicle.model} from wishlist` : `Add ${vehicle.make} ${vehicle.model} to wishlist`}
+            className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${isWishlisted ? 'bg-red-500/20 border-red-500 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-black/40 border-white/10 text-white hover:text-red-500 hover:border-red-500/50'}`}
+          >
             <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
           </button>
-          <button onClick={handleCompare} className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${isCompared ? 'bg-[#C9A227]/20 border-[#C9A227] text-[#C9A227] shadow-[0_0_15px_rgba(201,162,39,0.4)]' : 'bg-black/40 border-white/10 text-white hover:text-[#C9A227] hover:border-[#C9A227]/50'}`}>
+          <button 
+            onClick={handleCompare} 
+            aria-label={isCompared ? `Remove ${vehicle.make} ${vehicle.model} from comparison` : `Add ${vehicle.make} ${vehicle.model} to comparison`}
+            className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-300 ${isCompared ? 'bg-[#C9A227]/20 border-[#C9A227] text-[#C9A227] shadow-[0_0_15px_rgba(201,162,39,0.4)]' : 'bg-black/40 border-white/10 text-white hover:text-[#C9A227] hover:border-[#C9A227]/50'}`}
+          >
             <GitCompare className="w-4 h-4" />
           </button>
         </div>
@@ -142,12 +151,14 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         <div className="absolute top-1/2 -translate-y-1/2 left-2 right-2 flex items-center justify-between z-30 pointer-events-none">
           <button 
             onClick={prevImage}
+            aria-label={`Previous image for ${vehicle.make} ${vehicle.model}`}
             className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#C9A227] hover:text-black transition-colors pointer-events-auto"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button 
             onClick={nextImage}
+            aria-label={`Next image for ${vehicle.make} ${vehicle.model}`}
             className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#C9A227] hover:text-black transition-colors pointer-events-auto"
           >
             <ChevronRight className="w-4 h-4" />
@@ -203,6 +214,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
           </Link>
           <Link
             href={`/contact?vehicle=${vehicle.id}`}
+            aria-label={`Inquire with concierge about ${vehicle.make} ${vehicle.model}`}
             className="w-12 h-12 rounded-xl glass-panel border border-[#C9A227]/30 flex items-center justify-center text-white hover:border-[#C9A227] hover:text-[#C9A227] transition-colors"
           >
             <ShieldCheck className="w-4 h-4" />

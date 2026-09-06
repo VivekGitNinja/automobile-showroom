@@ -137,6 +137,7 @@ export default function Testimonials() {
         <div className="flex items-center justify-center gap-6 mt-10">
           <button 
             onClick={prevTestimonial}
+            aria-label="Previous testimonial"
             className="w-12 h-12 rounded-full glass-panel border border-white/10 flex items-center justify-center text-white hover:text-black hover:bg-[#C9A227] hover:border-[#C9A227] transition-all duration-300 shadow-lg"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -147,6 +148,7 @@ export default function Testimonials() {
               <button 
                 key={idx}
                 onClick={() => setActiveIndex(idx)}
+                aria-label={`Go to testimonial ${idx + 1}`}
                 className={`transition-all duration-500 rounded-full ${
                   activeIndex === idx 
                     ? 'w-8 h-2 bg-[#C9A227] shadow-[0_0_10px_rgba(201,162,39,0.5)]' 
@@ -158,6 +160,7 @@ export default function Testimonials() {
 
           <button 
             onClick={nextTestimonial}
+            aria-label="Next testimonial"
             className="w-12 h-12 rounded-full glass-panel border border-white/10 flex items-center justify-center text-white hover:text-black hover:bg-[#C9A227] hover:border-[#C9A227] transition-all duration-300 shadow-lg"
           >
             <ChevronRight className="w-5 h-5" />
