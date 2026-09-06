@@ -23,14 +23,14 @@ export const publicLimiter = rateLimit({
 
 export const leadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   store: store(),
   message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Submission limit reached. Please wait before trying again.' } },
 })
 
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: process.env.NODE_ENV === 'production' ? 5 : 1000,
   store: store(),
   skipSuccessfulRequests: true,
   message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many login attempts. Try again in 15 minutes.' } },

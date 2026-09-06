@@ -17,7 +17,7 @@ const leadSchema = z.object({
   vehicleId: z.string().uuid().optional(),
   leadType: z.enum(['enquiry', 'booking', 'callback', 'sell_car']).default('enquiry'),
   message: z.string().optional(),
-  company_website: z.string().max(0).optional().default(''),
+  company_website: z.string().optional().default(''),
 })
 
 // POST /api/v1/leads
@@ -131,7 +131,7 @@ router.post('/sell-car', leadLimiter, async (req: Request, res: Response, next: 
       description: z.string().optional(),
       askingPrice: z.string().optional(),
       imageUrls: z.array(z.string().url().max(2048)).max(12).optional().default([]),
-      company_website: z.string().max(0).optional().default(''),
+      company_website: z.string().optional().default(''),
     })
 
     const data = sellCarSchema.parse(req.body)
