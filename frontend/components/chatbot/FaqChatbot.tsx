@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, X, Send, Phone, RefreshCw, ShieldCheck, ChevronRight, User, Sparkles, Calendar, ArrowUpRight, Crown } from 'lucide-react'
 import BookingModal from '../BookingModal'
+import CallbackModal from '../CallbackModal'
 import { API_BASE_URL } from '../../lib/api'
 
 interface ChatMessage {
@@ -11,7 +12,7 @@ interface ChatMessage {
   sender: 'bot' | 'user'
   text: string
   options?: string[]
-  cta?: { label: string; action: 'booking' | 'whatsapp' }
+  cta?: { label: string; action: 'booking' | 'whatsapp' | 'callback' }
   timestamp: string
 }
 
@@ -38,6 +39,7 @@ const FALLBACK_WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '9715089194
 export default function FaqChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [callbackModalOpen, setCallbackModalOpen] = useState(false)
   const [inputQuery, setInputQuery] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isTyping, setIsTyping] = useState(false)
@@ -152,7 +154,7 @@ export default function FaqChatbot() {
     setIsTyping(true)
 
     let matchedAnswer = ''
-    let cta: { label: string; action: 'booking' | 'whatsapp' } | undefined = undefined
+    let cta: { label: string; action: 'booking' | 'whatsapp' | 'callback' } | undefined = undefined
     let options: string[] | undefined = undefined
 
     if (optionsMode?.type === 'category') {
@@ -173,8 +175,8 @@ export default function FaqChatbot() {
       const vehiclePriceQuery = /(price|cost|how much|quote).*(car|vehicle|model|this|it)|(car|vehicle|model).*(price|cost)/.test(lower)
 
       if (vehiclePriceQuery && (!match || score < 6)) {
-        matchedAnswer = 'Vehicle pricing is tailored to each individual acquisition. Our VIP Sales Director will gladly prepare a personal quotation — would you like to connect on WhatsApp or book a private viewing?'
-        cta = { label: 'Request a Callback', action: 'whatsapp' }
+        matchedAnswer = 'Vehicle pricing is tailored to each individual acquisition. Our VIP Sales Director will gladly prepare a personal quotation — would you like to request a callback or connect on WhatsApp?'
+        cta = { label: 'Request a Callback', action: 'callback' }
       } else if (match && score >= 3) {
         matchedAnswer = match.a
       } else if (/view|book|schedule|appointment|test drive|visit/.test(lower)) {
@@ -182,8 +184,8 @@ export default function FaqChatbot() {
         cta = { label: 'Book Private Viewing', action: 'booking' }
       } else {
         // Human fallback so no lead is lost
-        matchedAnswer = 'I want to make sure you get an accurate answer, so I will hand this to our human concierge team. You can reach them instantly on WhatsApp, request a callback, or use the enquiry form — we respond promptly during showroom hours.'
-        cta = { label: 'Chat with Our Team', action: 'whatsapp' }
+        matchedAnswer = 'I want to make sure you get an accurate answer, so I will hand this to our human concierge team. You can request a callback directly below or connect instantly on WhatsApp.'
+        cta = { label: 'Request a Callback', action: 'callback' }
       }
     }
 
@@ -345,6 +347,27 @@ export default function FaqChatbot() {
                               <span>{m.cta.label}</span>
                               <ArrowUpRight className="w-4 h-4" />
                             </button>
+                          ) : m.cta.action === 'callback' ? (
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => setCallbackModalOpen(true)}
+                                className="w-full py-2.5 px-4 rounded-xl bg-[#C9A227] text-black font-bold font-mono text-[10px] uppercase tracking-widest flex items-center justify-between hover:bg-[#E5C158] transition-colors"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>{m.cta.label}</span>
+                                </span>
+                                <ArrowUpRight className="w-4 h-4" />
+                              </button>
+                              <a
+                                href={waLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-1.5 px-3 rounded-lg border border-white/10 text-[#A0A0A0] hover:text-white font-mono text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors"
+                              >
+                                <span>Or connect on WhatsApp</span>
+                              </a>
+                            </div>
                           ) : (
                             <a
                               href={waLink}
@@ -418,6 +441,12 @@ export default function FaqChatbot() {
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
         vehicleName="VIP Concierge Private Appointment"
+      />
+
+      <CallbackModal
+        isOpen={callbackModalOpen}
+        onClose={() => setCallbackModalOpen(false)}
+        vehicleName="VIP Concierge Desk"
       />
     </>
   )

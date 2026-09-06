@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Loader2, Users, Search, Filter, Phone, Mail, Clock, CheckCircle, XCircle, ArrowRight, Download } from 'lucide-react'
 import { API_BASE_URL } from '../../../lib/api'
+import { adminFetch } from '../../../lib/adminFetch'
 
 export default function LeadsViewer() {
   const [loading, setLoading] = useState(true)
@@ -22,7 +23,7 @@ export default function LeadsViewer() {
         : `${API_BASE_URL}/admin/leads?leadType=${filterType}`
         
       const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {}
       })
       const data = await res.json()
       if (res.ok) {
@@ -38,12 +39,10 @@ export default function LeadsViewer() {
   const updateLeadStatus = async (id: string, newStatus: string) => {
     const token = localStorage.getItem('adminToken')
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/leads/${id}/status`, {
+      const res = await adminFetch(`${API_BASE_URL}/admin/leads/${id}/status`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({ status: newStatus })
       })
       if (res.ok) {
@@ -107,7 +106,7 @@ export default function LeadsViewer() {
           
           <div className="flex items-center gap-4">
             <div className="flex bg-black border border-white/10 rounded-full p-1">
-              {['all', 'enquiry', 'booking', 'sell_car'].map(type => (
+              {['all', 'enquiry', 'booking', 'callback', 'sell_car'].map(type => (
                 <button 
                   key={type}
                   onClick={() => setFilterType(type)}

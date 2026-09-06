@@ -10,9 +10,10 @@ interface AcquisitionDeskProps {
   vehicle: Vehicle
   onBookViewing: () => void
   onFinance: () => void
+  onRequestCallback?: () => void
 }
 
-export default function AcquisitionDesk({ vehicle, onBookViewing, onFinance }: AcquisitionDeskProps) {
+export default function AcquisitionDesk({ vehicle, onBookViewing, onFinance, onRequestCallback }: AcquisitionDeskProps) {
   const [copied, setCopied] = useState(false)
 
   const whatsappText = `I am interested in acquiring the ${vehicle.year} ${vehicle.make} ${vehicle.model}`
@@ -114,6 +115,15 @@ export default function AcquisitionDesk({ vehicle, onBookViewing, onFinance }: A
         >
           <Calendar className="w-4 h-4" /> Book Viewing
         </button>
+
+        {onRequestCallback && (
+          <button
+            onClick={onRequestCallback}
+            className="h-12 px-5 rounded-2xl text-[11px] font-mono uppercase tracking-wider bg-white/5 border border-[#C9A227]/40 text-[#C9A227] hover:bg-[#C9A227] hover:text-black hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+          >
+            <Phone className="w-4 h-4" /> Request Callback
+          </button>
+        )}
 
         <a
           href={whatsappUrl}

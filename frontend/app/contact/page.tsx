@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { MapPin, Phone, Mail, Clock, ShieldCheck, CheckCircle } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, ShieldCheck, CheckCircle, PhoneCall } from 'lucide-react'
 import { API_BASE_URL } from '../../lib/api'
+import CallbackModal from '../../components/CallbackModal'
 
 import { z } from 'zod'
 import { SITE_URL } from '../../lib/site'
@@ -17,6 +18,9 @@ const contactSchema = z.object({
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [callbackModalOpen, setCallbackModalOpen] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [companyWebsite, setCompanyWebsite] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     fullName: '',
@@ -75,11 +79,12 @@ export default function ContactPage() {
     }
 
     setLoading(true)
+    setSubmitError(null)
     try {
       // Simulated reCAPTCHA delay / submission lock
       await new Promise(resolve => setTimeout(resolve, 800))
       
-      await fetch(`${API_BASE_URL}/leads`, {
+      const res = await fetch(`${API_BASE_URL}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,14 +92,22 @@ export default function ContactPage() {
           email: formData.email,
           phone: formData.phone || 'N/A',
           message: formData.message,
-          leadType: 'enquiry'
+          leadType: 'enquiry',
+          company_website: companyWebsite,
         }),
       })
-    } catch (err) {
-      // Fallback
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || errData.error || "We couldn't submit your message — please retry or contact our concierge via WhatsApp.")
+      }
+
+      setSubmitted(true)
+    } catch (err: any) {
+      console.error("Submission error:", err)
+      setSubmitError(err?.message || "We couldn't submit your message — please retry or contact our concierge via WhatsApp.")
     } finally {
       setLoading(false)
-      setSubmitted(true)
     }
   }
 
@@ -251,18 +264,53 @@ export default function ContactPage() {
                 />
                 {errors.message && <span className="text-red-500 text-xs mt-1 block">{errors.message}</span>}
               </div>
+              {/* Honeypot field for spam protection */}
+              <input
+                type="text"
+                name="company_website"
+                value={companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute -left-[9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+              />
+
+              {submitError && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono leading-relaxed">
+                  {submitError}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-full bg-[#C9A227] text-[#050505] font-bold text-xs uppercase tracking-widest font-mono hover:bg-[#D4AF37] transition-colors shadow-gold-glow mt-4"
+                className="w-full py-3.5 rounded-full bg-[#C9A227] text-[#050505] font-bold text-xs uppercase tracking-widest font-mono hover:bg-[#D4AF37] transition-colors shadow-gold-glow mt-4 disabled:opacity-50"
               >
                 {loading ? 'Sending...' : 'Send Message'}
               </button>
+
+              <div className="mt-6 pt-6 border-t border-white/10 text-center">
+                <p className="text-xs font-mono text-[#7A7A7A] mb-3">Prefer an immediate personal conversation?</p>
+                <button
+                  type="button"
+                  onClick={() => setCallbackModalOpen(true)}
+                  className="px-6 py-2.5 rounded-full border border-[#C9A227]/40 text-[#C9A227] hover:bg-[#C9A227] hover:text-black transition-all text-xs font-mono uppercase tracking-widest font-bold inline-flex items-center gap-2 shadow-sm"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>Prefer a call? Request a callback</span>
+                </button>
+              </div>
             </form>
           )}
         </div>
       </div>
     </div>
+
+    <CallbackModal
+      isOpen={callbackModalOpen}
+      onClose={() => setCallbackModalOpen(false)}
+    />
     </>
   )
 }

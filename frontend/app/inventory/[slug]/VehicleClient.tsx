@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import { Vehicle, VehicleImage } from '../../../lib/types'
 import BookingModal from '../../../components/BookingModal'
+import CallbackModal from '../../../components/CallbackModal'
 import EmiCalculatorModal from '../../../components/EmiCalculatorModal'
 import HeroGallery from './_components/HeroGallery'
 import FullscreenLightbox from './_components/FullscreenLightbox'
@@ -24,6 +25,7 @@ interface VehicleClientProps {
 
 export default function VehicleClient({ vehicle, relatedVehicles }: VehicleClientProps) {
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [callbackModalOpen, setCallbackModalOpen] = useState(false)
   const [emiModalOpen, setEmiModalOpen] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -59,6 +61,7 @@ export default function VehicleClient({ vehicle, relatedVehicles }: VehicleClien
           <AcquisitionDesk
             vehicle={vehicle}
             onBookViewing={() => setBookingModalOpen(true)}
+            onRequestCallback={() => setCallbackModalOpen(true)}
             onFinance={() => setEmiModalOpen(true)}
           />
         </section>
@@ -164,6 +167,13 @@ export default function VehicleClient({ vehicle, relatedVehicles }: VehicleClien
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
         vehicleName={`${vehicle.make} ${vehicle.model} (${vehicle.year})`}
+      />
+
+      <CallbackModal
+        isOpen={callbackModalOpen}
+        onClose={() => setCallbackModalOpen(false)}
+        vehicleId={vehicle.id}
+        vehicleName={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
       />
 
       <EmiCalculatorModal
