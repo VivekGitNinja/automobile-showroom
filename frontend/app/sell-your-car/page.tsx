@@ -24,6 +24,8 @@ export default function SellYourCarPage() {
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [companyWebsite, setCompanyWebsite] = useState('')
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -41,6 +43,7 @@ export default function SellYourCarPage() {
     if (loading || uploadingFiles) return
     
     setErrors({})
+    setSubmitError(null)
     const validation = sellCarSchema.safeParse(formData)
     
     if (!validation.success) {
@@ -59,6 +62,7 @@ export default function SellYourCarPage() {
       let uploadedUrls: string[] = []
       
       if (files.length > 0) {
+        setUploadingFiles(true)
         const uploadData = new FormData()
         files.forEach(file => uploadData.append('files', file))
         
@@ -67,27 +71,40 @@ export default function SellYourCarPage() {
           body: uploadData,
         })
         
-        if (uploadRes.ok) {
-          const resJson = await uploadRes.json()
-          uploadedUrls = resJson.urls || resJson.data?.urls || []
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json().catch(() => ({}))
+          throw new Error(errData.message || 'Vehicle image upload failed. Please verify the image formats (JPEG/PNG) and retry.')
         }
+        
+        const resJson = await uploadRes.json()
+        uploadedUrls = resJson.urls || resJson.data?.urls || []
+        setUploadingFiles(false)
       }
 
       const finalData = {
         ...formData,
-        mediaUrls: uploadedUrls
+        imageUrls: uploadedUrls,
+        company_website: companyWebsite,
       }
 
-      await fetch(`${API_BASE_URL}/leads/sell-car`, {
+      const res = await fetch(`${API_BASE_URL}/leads/sell-car`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(finalData),
       })
-    } catch (err) {
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || errData.error || "We couldn't submit your vehicle valuation request — please retry or contact our acquisition desk via WhatsApp.")
+      }
+
+      setSubmitted(true)
+    } catch (err: any) {
       console.error("Submission error:", err)
+      setSubmitError(err?.message || "We couldn't submit your vehicle valuation request — please retry or contact our acquisition desk via WhatsApp.")
     } finally {
       setLoading(false)
-      setSubmitted(true)
+      setUploadingFiles(false)
     }
   }
 
@@ -288,12 +305,30 @@ export default function SellYourCarPage() {
               )}
             </div>
 
+            {/* Honeypot field for spam bots */}
+            <input
+              type="text"
+              name="company_website"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="absolute -left-[9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+            />
+
+            {submitError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono leading-relaxed">
+                {submitError}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-full bg-gold hover:bg-gold-light text-dark font-bold text-xs uppercase tracking-widest transition-colors shadow-lg shadow-gold/20"
+              className="w-full py-4 rounded-full bg-gold hover:bg-gold-light text-dark font-bold text-xs uppercase tracking-widest transition-colors shadow-lg shadow-gold/20 disabled:opacity-50"
             >
-              {loading ? 'Submitting Valuation...' : 'Submit Vehicle For Valuation'}
+              {loading ? (uploadingFiles ? 'Uploading Imagery...' : 'Submitting Valuation...') : 'Submit Vehicle For Valuation'}
             </button>
           </form>
         )}

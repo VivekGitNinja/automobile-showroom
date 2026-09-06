@@ -121,20 +121,26 @@ export class StorageService {
 
     // Local Disk Fallback
     const filePath = path.join(this.localStorageDir, options.filename)
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
     await fs.promises.writeFile(filePath, options.buffer)
     
     let thumbUrl: string | undefined
     if (thumbBuffer) {
-      const thumbPath = path.join(this.localStorageDir, `thumb-${options.filename}`)
+      const thumbFilename = `thumb-${path.basename(options.filename)}`
+      const thumbPath = path.join(path.dirname(filePath), thumbFilename)
       await fs.promises.writeFile(thumbPath, thumbBuffer)
-      thumbUrl = `/uploads/thumb-${options.filename}`
+      const relThumb = path.relative(this.localStorageDir, thumbPath).replace(/\\/g, '/')
+      thumbUrl = `/uploads/${relThumb}`
     }
 
     logger.info(`Saved file locally to ${filePath}`)
 
+    const baseUrl = (process.env.APP_URL || process.env.BASE_URL || process.env.CDN_BASE_URL || 'http://localhost:4000').replace(/\/$/, '')
+    const relFile = path.relative(this.localStorageDir, filePath).replace(/\\/g, '/')
+
     return {
-      url: `/uploads/${options.filename}`,
-      thumbnailUrl: thumbUrl,
+      url: `${baseUrl}/uploads/${relFile}`,
+      thumbnailUrl: thumbUrl ? `${baseUrl}${thumbUrl}` : undefined,
       provider: 'local',
       key: options.filename,
     }

@@ -15,6 +15,7 @@ export function invokeApp(
     body?: any
     headers?: Record<string, string>
     query?: Record<string, string>
+    files?: any
   }
 ): Promise<MockResponse> {
   return new Promise((resolve, reject) => {
@@ -30,6 +31,9 @@ export function invokeApp(
     req.path = path
     req.query = options.query || {}
     req.headers = {}
+    if (options.files) {
+      req.files = options.files
+    }
     
     if (options.headers) {
       for (const [k, v] of Object.entries(options.headers)) {
@@ -88,8 +92,18 @@ export function invokeApp(
       resolve({ status: statusCode, statusCode, body, headers: responseHeaders })
       return res
     }
+    res.write = (chunk: any) => {
+      if (chunk) {
+        if (!body) body = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+        else body = Buffer.concat([Buffer.isBuffer(body) ? body : Buffer.from(body), Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)])
+      }
+      return true
+    }
     res.end = (data?: any) => {
-      if (data && !body) body = data
+      if (data) {
+        if (!body) body = data
+        else if (Buffer.isBuffer(body)) body = Buffer.concat([body, Buffer.isBuffer(data) ? data : Buffer.from(data)])
+      }
       res.headersSent = true
       resolve({ status: statusCode, statusCode, body, headers: responseHeaders })
       return res
