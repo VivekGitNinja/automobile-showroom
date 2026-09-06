@@ -17,11 +17,18 @@ const leadSchema = z.object({
   vehicleId: z.string().uuid().optional(),
   leadType: z.enum(['enquiry', 'booking', 'callback', 'sell_car']).default('enquiry'),
   message: z.string().optional(),
+  company_website: z.string().max(0).optional().default(''),
 })
 
 // POST /api/v1/leads
 router.post('/', leadLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // WP4 Honeypot check: If bot filled company_website, return fake success without persisting
+    if (req.body.company_website && String(req.body.company_website).trim().length > 0) {
+      res.status(201).json({ message: 'Lead submitted successfully', data: { id: 'mock-honeypot-id' } })
+      return
+    }
+
     const data = leadSchema.parse(req.body)
 
     // Check for duplicates

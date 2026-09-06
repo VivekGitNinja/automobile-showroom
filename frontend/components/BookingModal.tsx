@@ -23,6 +23,7 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [companyWebsite, setCompanyWebsite] = useState('')
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -61,6 +62,7 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          company_website: companyWebsite,
           message: vehicleName ? `Inquiry for ${vehicleName}. ${formData.message}` : formData.message,
         }),
       })
@@ -115,6 +117,18 @@ export default function BookingModal({ isOpen, onClose, vehicleName }: BookingMo
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Honeypot Spam Trap */}
+              <input
+                type="text"
+                name="company_website"
+                value={companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute -left-[9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+              />
+
               <div>
                 <label className="block text-[10px] uppercase tracking-widest font-mono text-[#7A7A7A] mb-1">Full Name *</label>
                 <input
