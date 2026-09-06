@@ -7,6 +7,7 @@ import { rbac } from '../middleware/rbac.middleware'
 import { notificationQueue } from '../config/bullmq'
 import multer from 'multer'
 import { storageService } from '../services/storage.service'
+import crypto from 'crypto'
 
 const router = Router()
 
@@ -25,7 +26,7 @@ router.post('/', leadLimiter, async (req: Request, res: Response, next: NextFunc
   try {
     // WP4 Honeypot check: If bot filled company_website, return fake success without persisting
     if (req.body.company_website && String(req.body.company_website).trim().length > 0) {
-      res.status(201).json({ message: 'Lead submitted successfully', data: { id: 'mock-honeypot-id' } })
+      res.status(201).json({ message: 'Lead submitted successfully', data: { id: crypto.randomUUID() } })
       return
     }
 
@@ -116,7 +117,7 @@ router.post('/sell-car', leadLimiter, async (req: Request, res: Response, next: 
   try {
     // WP4 Honeypot check: If bot filled company_website, return fake success without persisting
     if (req.body.company_website && String(req.body.company_website).trim().length > 0) {
-      res.status(201).json({ message: 'Sell car inquiry submitted', data: { id: 'mock-honeypot-id' } })
+      res.status(201).json({ message: 'Sell car inquiry submitted', data: { id: crypto.randomUUID() } })
       return
     }
 

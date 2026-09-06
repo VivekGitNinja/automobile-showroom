@@ -79,7 +79,7 @@ describe('WP4 — Honeypot Spam Protection', () => {
 
       expect(res.status).toBe(201)
       expect(res.body.message).toBe('Lead submitted successfully')
-      expect(res.body.data.id).toBe('mock-honeypot-id')
+      expect(res.body.data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
       // Critical security check: DB write and background email job NEVER triggered
       expect(prisma.lead.findFirst).not.toHaveBeenCalled()
       expect(prisma.lead.create).not.toHaveBeenCalled()
@@ -137,7 +137,7 @@ describe('WP4 — Honeypot Spam Protection', () => {
 
       expect(res.status).toBe(201)
       expect(res.body.message).toBe('Sell car inquiry submitted')
-      expect(res.body.data.id).toBe('mock-honeypot-id')
+      expect(res.body.data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
       // Critical security check: DB write and background email job NEVER triggered
       expect(prisma.sellCarSubmission.create).not.toHaveBeenCalled()
       expect(notificationQueue.add).not.toHaveBeenCalled()
