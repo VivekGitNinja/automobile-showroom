@@ -29,9 +29,25 @@ cd api && npx prisma migrate dev
 # Admin:    http://localhost:3000/admin
 ```
 
+## Database Seeding & Production Gating
+
+The database seed (`api/prisma/seed.ts`) is safe for production use:
+- **Production (`NODE_ENV=production`):** Creates or updates the administrator account, global showroom settings, system FAQ categories, and luxury marque brands. Demo vehicles, spare parts, and journal posts are **gated out by default** (`SEED_DEMO_DATA=false`) to ensure placeholder imagery never surfaces on the public website.
+- **Development (`NODE_ENV=development`):** Seeds demo vehicles, parts, and articles in **`status: 'draft'`** so they can be reviewed and tested safely.
+- **Explicit Override:** Set `SEED_DEMO_DATA=true` to seed demo catalog items in any environment.
+
+```bash
+# Development seeding
+cd api && npx prisma db seed
+
+# Production seeding (creates admin & baseline settings only)
+NODE_ENV=production npx prisma db seed
+```
+
 ## Documentation
-See `docs/ESAD_Luxury_Automobile_Showroom.html` for the full
-Enterprise Software Architecture Document.
+- [SETUP.md](SETUP.md) — Comprehensive launch guide, environment configurations, and integration setup
+- [ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) — Operational handbook for showroom management
+- [OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md) — Production operations and deployment runbook
 
 ## Contact
 - Email: info@Techzoetic.com

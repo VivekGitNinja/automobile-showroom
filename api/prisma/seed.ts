@@ -12,11 +12,19 @@ async function main() {
   if (!process.env.ADMIN_PASSWORD) {
     console.warn('⚠️  ADMIN_PASSWORD not set — seeding with the default development password. Set ADMIN_PASSWORD before going live!')
   }
+  if (process.env.NODE_ENV === 'production' && (!process.env.ADMIN_PASSWORD || adminPassword.length < 12)) {
+    throw new Error(
+      'Refusing to seed a production database with a missing/weak ADMIN_PASSWORD. ' +
+      'Set ADMIN_EMAIL and a strong ADMIN_PASSWORD (12+ characters) in the environment first.'
+    )
+  }
   const passwordHash = await bcrypt.hash(adminPassword, 12)
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    // An explicitly provided ADMIN_PASSWORD rotates the existing admin's
+    // password on re-seed; the auto-generated one only applies on create.
+    update: process.env.ADMIN_PASSWORD ? { passwordHash, isActive: true } : {},
     create: {
       email: adminEmail,
       passwordHash,
@@ -175,13 +183,21 @@ async function main() {
   }
   console.log(`✅ ${brands.length} brands created`)
 
-  // ─── 6. Sample Vehicles ────────────────────────
+  // ─── Demo Data Gate ─────────────────────────────
+  const allowDemo = process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_DATA === 'true'
+  if (!allowDemo) {
+    console.log('Production environment detected: Demo seed data skipped (admin user, site settings, FAQs, and brands preserved).')
+    console.log('Set SEED_DEMO_DATA=true in environment if demo vehicles/parts/journal posts are explicitly required.')
+    return
+  }
+
+  // ─── 6. Sample Vehicles (Draft Demo Content) ────
   const sampleVehicles = [
-    { make: 'Rolls-Royce', model: 'Phantom', trim: 'Series VIII', year: 2023, price: 2500000, mileage: '500', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'Sedan', exteriorColor: 'Black', interiorColor: 'Tan', engine: '6.75L V12', status: 'published', isFeatured: true, brandSlug: 'rolls-royce' },
-    { make: 'Ferrari', model: 'SF90 Stradale', trim: 'Assetto Fiorano', year: 2022, price: 1800000, mileage: '1200', transmission: 'Automatic', fuelType: 'Hybrid', bodyType: 'Coupe', exteriorColor: 'Red', interiorColor: 'Black', engine: '4.0L V8', status: 'published', isFeatured: true, brandSlug: 'ferrari' },
-    { make: 'Lamborghini', model: 'Urus', trim: 'Performante', year: 2024, price: 1500000, mileage: '100', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'SUV', exteriorColor: 'Yellow', interiorColor: 'Black', engine: '4.0L V8 Twin-Turbo', status: 'published', isFeatured: false, brandSlug: 'lamborghini' },
-    { make: 'Porsche', model: '911', trim: 'GT3 RS', year: 2023, price: 1200000, mileage: '800', transmission: 'PDK', fuelType: 'Petrol', bodyType: 'Coupe', exteriorColor: 'Silver', interiorColor: 'Red', engine: '4.0L Flat-6', status: 'published', isFeatured: true, brandSlug: 'porsche' },
-    { make: 'Mercedes-Benz', model: 'G-Class', trim: 'G63 AMG', year: 2023, price: 850000, mileage: '1500', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'SUV', exteriorColor: 'White', interiorColor: 'Red', engine: '4.0L V8 Biturbo', status: 'published', isFeatured: false, brandSlug: 'mercedes-benz' },
+    { make: 'Rolls-Royce', model: 'Phantom', trim: 'Series VIII', year: 2023, price: 2500000, mileage: '500', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'Sedan', exteriorColor: 'Black', interiorColor: 'Tan', engine: '6.75L V12', status: 'draft', isFeatured: true, brandSlug: 'rolls-royce' },
+    { make: 'Ferrari', model: 'SF90 Stradale', trim: 'Assetto Fiorano', year: 2022, price: 1800000, mileage: '1200', transmission: 'Automatic', fuelType: 'Hybrid', bodyType: 'Coupe', exteriorColor: 'Red', interiorColor: 'Black', engine: '4.0L V8', status: 'draft', isFeatured: true, brandSlug: 'ferrari' },
+    { make: 'Lamborghini', model: 'Urus', trim: 'Performante', year: 2024, price: 1500000, mileage: '100', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'SUV', exteriorColor: 'Yellow', interiorColor: 'Black', engine: '4.0L V8 Twin-Turbo', status: 'draft', isFeatured: false, brandSlug: 'lamborghini' },
+    { make: 'Porsche', model: '911', trim: 'GT3 RS', year: 2023, price: 1200000, mileage: '800', transmission: 'PDK', fuelType: 'Petrol', bodyType: 'Coupe', exteriorColor: 'Silver', interiorColor: 'Red', engine: '4.0L Flat-6', status: 'draft', isFeatured: true, brandSlug: 'porsche' },
+    { make: 'Mercedes-Benz', model: 'G-Class', trim: 'G63 AMG', year: 2023, price: 850000, mileage: '1500', transmission: 'Automatic', fuelType: 'Petrol', bodyType: 'SUV', exteriorColor: 'White', interiorColor: 'Red', engine: '4.0L V8 Biturbo', status: 'draft', isFeatured: false, brandSlug: 'mercedes-benz' },
   ]
 
   let vehicleCount = 0

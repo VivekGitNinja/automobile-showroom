@@ -22,6 +22,7 @@ x-api-env: &api-env
   REVALIDATE_URL: "http://nextjs:3000/api/revalidate"
   NODE_ENV: production
   APP_VERSION: "${APP_VERSION}"
+  SEED_DEMO_DATA: "${SEED_DEMO_DATA:-false}"
 
 services:
   nginx:
