@@ -29,7 +29,8 @@ export default function AdminLoginPage() {
         // for /admin in its cache, which would swallow router.push.
         window.location.assign('/admin')
       } else {
-        setLoginError(data.message || 'Invalid credentials')
+        const errMsg = (typeof data.error === 'object' ? data.error?.message : data.error) || data.message || 'Invalid credentials'
+        setLoginError(errMsg)
       }
     } catch (err) {
       setLoginError('Login failed')

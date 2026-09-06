@@ -180,12 +180,12 @@ export default function FaqChatbot() {
       const lower = userText.toLowerCase()
       const { faq: match, score } = findBestAnswer(userText)
 
-      // Vehicle-specific prices/specs are deliberately NOT answered by the bot
+      // Vehicle-specific prices/specs are deliberately NOT answered by the bot (PRD H11)
       // (the spec requires routing such queries to a human unless reliably sourced).
-      const vehiclePriceQuery = /(price|cost|how much|quote).*(car|vehicle|model|this|it)|(car|vehicle|model).*(price|cost)/.test(lower)
+      const vehiclePriceQuery = /(price|cost|how much|quote|pricing|aed|worth|valuation)/i.test(lower)
 
-      if (vehiclePriceQuery && (!match || score < 6)) {
-        matchedAnswer = 'Vehicle pricing is tailored to each individual acquisition. Our VIP Sales Director will gladly prepare a personal quotation — would you like to request a callback or connect on WhatsApp?'
+      if (vehiclePriceQuery) {
+        matchedAnswer = 'Vehicle pricing is tailored to each individual acquisition and market specification. Our VIP Sales Concierge will prepare a personal quotation — would you like to request a callback or connect on WhatsApp?'
         cta = { label: 'Request a Callback', action: 'callback' }
       } else if (match && score >= 3) {
         matchedAnswer = match.a

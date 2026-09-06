@@ -141,9 +141,16 @@ test.describe('Admin', () => {
 
   test('admin: login via UI shows dashboard with all tabs and fleet data', async ({ page }) => {
     await page.goto('/admin/login');
-    // Scope to the login card (footer newsletter also has an email input)
-    await page.locator('main input[type="email"]').fill('admin@apex.ae');
-    await page.locator('main input[type="password"]').fill(process.env.ADMIN_PASSWORD || 'zojgWBXZdARzCorN8nwa');
+    const adminEmail = process.env.E2E_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@apex.ae';
+    const adminPassword = process.env.E2E_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      throw new Error('E2E_ADMIN_PASSWORD or ADMIN_PASSWORD must be provided via environment variables');
+    }
+    const emailInput = page.locator('main input[type="email"]');
+    await emailInput.waitFor({ state: 'visible' });
+    await page.waitForTimeout(500);
+    await emailInput.fill(adminEmail);
+    await page.locator('main input[type="password"]').fill(adminPassword);
     await page.getByRole('button', { name: /Initialize Session/i }).click();
     // Login page redirects to /admin after auth; wait for the dashboard to render
     await page.waitForURL(/\/admin(\/)?$|\/admin\?/, { timeout: 20000 });
