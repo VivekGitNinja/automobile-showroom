@@ -134,10 +134,31 @@ sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem  nginx/ssl/
 ## 6 · Deploy (docker compose)
 
 ```bash
-docker compose up -d --build          # nginx + nextjs + api + workers + postgres + redis
+docker compose up -d --build          # nginx + nextjs + api + workers + backup + postgres + redis
 docker compose exec api npx prisma migrate deploy
 docker compose exec api npx prisma db seed            # with ADMIN_PASSWORD set
 curl localhost/api/v1/health                            # expect healthy
+```
+
+---
+
+## 7 · Automated Database Backups & Disaster Recovery
+
+The production stack includes an automated `backup` container:
+- **Schedule**: Executes daily at 02:00 UTC via cron.
+- **Compression**: Output is compressed with `gzip` to `./backups/showroom_backup_YYYYMMDD_HHMMSS.sql.gz`.
+- **Retention**: Automatically prunes dumps older than 14 days.
+
+### Manual Backup Trigger
+```bash
+./scripts/backup.sh
+# Output: ✅ Backup successfully created: ./backups/showroom_backup_20260906_214200.sql.gz (1.2M)
+```
+
+### Restoration Procedure
+```bash
+# Decompress and restore from any archive:
+gunzip -c ./backups/showroom_backup_YYYYMMDD_HHMMSS.sql.gz | docker compose exec -T postgres psql -U ${DB_USER:-showroom_user} -d showroom
 ```
 
 ---

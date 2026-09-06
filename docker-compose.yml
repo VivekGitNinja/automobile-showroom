@@ -147,6 +147,30 @@ services:
       timeout: 5s
       retries: 5
 
+  backup:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: showroom
+      POSTGRES_USER: "${DB_USER}"
+      PGPASSWORD: "${DB_PASS}"
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: 14
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        chmod +x /scripts/backup.sh
+        echo "0 2 * * * /scripts/backup.sh >> /backups/cron.log 2>&1" > /etc/crontabs/root
+        crond -f -l 2
+
 volumes:
   pg_data:
   redis_data:

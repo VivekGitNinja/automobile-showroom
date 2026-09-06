@@ -58,3 +58,11 @@ frontend/playwright-report/
 
 # Coverage output
 api/coverage/
+
+# code-review-graph (local code graph database)
+.code-review-graph/
+
+# Database backups
+backups/
+*.sql.gz
+

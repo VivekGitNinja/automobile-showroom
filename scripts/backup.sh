@@ -1,30 +1,54 @@
-#!/bin/bash
-# PostgreSQL daily backup to AWS S3
-set -e
+#!/usr/bin/env bash
+set -eo pipefail
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="showroom_backup_${TIMESTAMP}.sql.gz"
-S3_PATH="s3://${S3_BUCKET}/postgres/${BACKUP_FILE}"
+# ==============================================================================
+# Apex Luxury Automobiles — Database Backup Script
+# Creates a compressed PostgreSQL database dump with 14-day automatic pruning.
+# ==============================================================================
 
-echo "[$(date)] Starting backup: ${BACKUP_FILE}"
+# 1. Resolve Target Directory
+BACKUP_DIR="${BACKUP_DIR:-}"
+if [ -z "$BACKUP_DIR" ]; then
+  if [ -d "/backups" ]; then
+    BACKUP_DIR="/backups"
+  else
+    BACKUP_DIR="./backups"
+  fi
+fi
+mkdir -p "$BACKUP_DIR"
 
-# Dump and compress
-PGPASSWORD="${DB_PASS}" pg_dump   -h postgres   -U "${DB_USER}"   -d showroom   --no-password   --format=plain   --clean   | gzip > "/tmp/${BACKUP_FILE}"
+RETENTION_DAYS="${RETENTION_DAYS:-14}"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+TARGET_FILE="${BACKUP_DIR}/showroom_backup_${TIMESTAMP}.sql.gz"
 
-# Upload to S3
-aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_PATH}"   --storage-class STANDARD_IA
+echo "📦 [$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Starting database backup..."
 
-# Cleanup local file
-rm "/tmp/${BACKUP_FILE}"
+# 2. Execute pg_dump
+if [ -n "$DATABASE_URL" ]; then
+  pg_dump "$DATABASE_URL" | gzip > "$TARGET_FILE"
+else
+  export PGHOST="${POSTGRES_HOST:-localhost}"
+  export PGPORT="${POSTGRES_PORT:-5432}"
+  export PGUSER="${POSTGRES_USER:-${DB_USER:-showroom_user}}"
+  export PGDATABASE="${POSTGRES_DB:-showroom}"
+  export PGPASSWORD="${PGPASSWORD:-${DB_PASS}}"
 
-# Delete backups older than 30 days
-aws s3 ls "s3://${S3_BUCKET}/postgres/"   | awk '{print $4}'   | while read file; do
-      file_date=$(echo $file | sed 's/[^0-9]//g' | cut -c1-8)
-      # Note: 'date -d' is GNU-specific syntax but runs fine inside the Linux container
-      if [[ $(date -d "${file_date}" +%s) -lt $(date -d "30 days ago" +%s) ]]; then
-        aws s3 rm "s3://${S3_BUCKET}/postgres/${file}"
-        echo "Deleted old backup: ${file}"
-      fi
-    done
+  pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" | gzip > "$TARGET_FILE"
+fi
 
-echo "[$(date)] Backup complete: ${S3_PATH}"
+# 3. Verify Dump Success
+if [ ! -s "$TARGET_FILE" ]; then
+  echo "❌ Error: Backup output file is empty or was not created: $TARGET_FILE"
+  rm -f "$TARGET_FILE"
+  exit 1
+fi
+
+FILE_SIZE="$(du -h "$TARGET_FILE" | cut -f1)"
+echo "✅ Backup successfully created: $TARGET_FILE (${FILE_SIZE})"
+
+# 4. Prune Backups Older Than Retention Window
+echo "🧹 Pruning backups older than ${RETENTION_DAYS} days in ${BACKUP_DIR}..."
+find "$BACKUP_DIR" -name "showroom_backup_*.sql.gz" -mtime +"${RETENTION_DAYS}" -exec rm -f {} + 2>/dev/null || true
+
+echo "🎉 Database backup cycle completed successfully."
+exit 0
