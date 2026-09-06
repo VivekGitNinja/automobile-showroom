@@ -110,6 +110,16 @@ export default function FaqChatbot() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
   // ------------------------------------------------------------------
   // Rule-based matcher — NO LLM. Answers come only from the staff-managed
   // FAQ set: exact question hits, staff-defined keywords, category names,
@@ -240,6 +250,9 @@ export default function FaqChatbot() {
         {/* Floating Trigger Badge */}
         {!isOpen && (
           <motion.button
+            aria-label="Open VIP Concierge Live Assistant"
+            aria-haspopup="dialog"
+            aria-expanded={false}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             whileHover={{ scale: 1.05 }}
@@ -265,6 +278,9 @@ export default function FaqChatbot() {
         <AnimatePresence>
           {isOpen && (
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="VIP Concierge Live Assistant"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -289,10 +305,10 @@ export default function FaqChatbot() {
                 </div>
 
                 <div className="flex items-center gap-1 text-white/60">
-                  <button onClick={handleReset} title="Reset Chat" className="p-2 hover:text-[#C9A227] transition">
+                  <button onClick={handleReset} title="Reset Chat" aria-label="Reset Conversation" className="p-2 hover:text-[#C9A227] transition">
                     <RefreshCw className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setIsOpen(false)} title="Close Chat" className="p-2 hover:text-white transition">
+                  <button onClick={() => setIsOpen(false)} title="Close Chat" aria-label="Close VIP Concierge Chat" className="p-2 hover:text-white transition">
                     <X className="w-5 h-5" />
                   </button>
                 </div>

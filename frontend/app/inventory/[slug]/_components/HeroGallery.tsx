@@ -97,6 +97,7 @@ export default function HeroGallery({ vehicle, images, onExpandGallery, onBookVi
       <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10">
         <Link 
           href="/inventory"
+          aria-label="Return to vehicle inventory"
           className="flex items-center justify-center w-12 h-12 rounded-full bg-black/40 backdrop-blur border border-white/10 text-white hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -175,6 +176,7 @@ export default function HeroGallery({ vehicle, images, onExpandGallery, onBookVi
               <button
                 key={img.id || idx}
                 onClick={() => setCurrentIndex(idx)}
+                aria-label={`View photo ${idx + 1}`}
                 className={`relative shrink-0 w-20 h-14 rounded-lg overflow-hidden transition-all ${
                   currentIndex === idx 
                     ? 'border-2 border-[#C9A227] opacity-100' 
@@ -197,6 +199,7 @@ export default function HeroGallery({ vehicle, images, onExpandGallery, onBookVi
             </span>
             <button
               onClick={onExpandGallery}
+              aria-label={`View all ${validImages.length} photos in fullscreen lightbox`}
               className="flex items-center gap-2 bg-black/60 backdrop-blur border border-white/20 text-white rounded-full px-6 py-3 hover:bg-white/10 transition-colors shrink-0"
             >
               <Maximize2 className="w-4 h-4" />

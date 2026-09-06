@@ -111,6 +111,8 @@ export default function Navbar() {
               <LanguageToggle />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-expanded={mobileMenuOpen}
                 className={`p-2 rounded-lg transition-colors ${scrolled ? 'text-white hover:text-[#C9A227]' : 'text-white hover:text-[#C9A227] bg-black/20 backdrop-blur-md border border-white/10'}`}
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

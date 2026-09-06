@@ -17,6 +17,7 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={toggleLanguage}
+      aria-label={`Switch language from ${lang === 'en' ? 'English' : 'Arabic'}`}
       className="px-3 py-1 rounded-full border border-white/20 text-xs font-mono uppercase tracking-wider text-gray-300 hover:text-white hover:border-white transition-all flex items-center gap-1.5"
     >
       <Globe className="w-3.5 h-3.5 text-white" />

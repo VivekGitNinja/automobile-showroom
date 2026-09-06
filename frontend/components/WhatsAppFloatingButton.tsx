@@ -41,6 +41,7 @@ export default function WhatsAppFloatingButton() {
           href={waLink('Hello, I am interested in your luxury vehicles')}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Contact VIP Concierge on WhatsApp"
           className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-[0_4px_20px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300"
         >
           <svg
