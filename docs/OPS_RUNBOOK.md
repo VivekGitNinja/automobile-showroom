@@ -18,7 +18,28 @@ Production operations, incident triage, and service management runbook for **Ape
 
 ---
 
-## 2. Common Incident Triage
+## 2. Pre-Flight Verification & Integration Proof Kit
+
+Before taking the platform live or after updating environment configuration, execute the pre-flight check suite:
+
+```bash
+# Full environment pre-flight inspection
+./scripts/preflight.sh
+```
+
+### Integration Probes
+- **Email Dispatch Proof (SendGrid v3)**:
+  ```bash
+  npx ts-node scripts/test-email.ts [recipient@domain.com]
+  ```
+- **Google Sheets Sync Probe (Read-Only)**:
+  ```bash
+  npx ts-node scripts/test-sync.ts
+  ```
+
+---
+
+## 3. Common Incident Triage
 
 ### 2.1 API Unhealthy (`/api/v1/health` fails)
 1. Check container status:
@@ -63,7 +84,7 @@ Production operations, incident triage, and service management runbook for **Ape
 
 ---
 
-## 3. Database Backup & Disaster Recovery
+## 4. Database Backup & Disaster Recovery
 
 ### Automated Backups
 - Database dumps run daily at 02:00 UTC and are stored in `/backups` with 14-day retention.

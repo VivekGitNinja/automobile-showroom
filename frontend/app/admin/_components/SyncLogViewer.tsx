@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { API_BASE_URL } from '../../../lib/api'
 import { Loader2, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { adminFetch } from '../../../lib/adminFetch'
 
 interface SyncLog {
   id: string
@@ -16,8 +17,17 @@ interface SyncLog {
   errorDetails?: string[]
 }
 
+interface SyncStatus {
+  configured: boolean
+  spreadsheetConfigured: boolean
+  serviceAccountJsonConfigured: boolean
+  serviceAccountPairConfigured: boolean
+  sheetName: string
+}
+
 export default function SyncLogViewer() {
   const [logs, setLogs] = useState<SyncLog[]>([])
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -25,16 +35,22 @@ export default function SyncLogViewer() {
   const fetchLogs = async () => {
     setLoading(true)
     setError(null)
-    const token = localStorage.getItem('adminToken')
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/sync/logs`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const [logsRes, statusRes] = await Promise.all([
+        adminFetch(`${API_BASE_URL}/admin/sync/logs`),
+        adminFetch(`${API_BASE_URL}/admin/sync/status`).catch(() => null),
+      ])
+
+      if (logsRes.ok) {
+        const data = await logsRes.json()
         setLogs(data.data || [])
       } else {
         setError('Failed to fetch sync logs.')
+      }
+
+      if (statusRes && statusRes.ok) {
+        const statusData = await statusRes.json()
+        setSyncStatus(statusData)
       }
     } catch (err) {
       setError('An error occurred while fetching sync logs.')
@@ -77,6 +93,36 @@ export default function SyncLogViewer() {
           <span>Refresh Logs</span>
         </button>
       </div>
+
+      {syncStatus && !syncStatus.configured && (
+        <div className="p-6 m-6 bg-[#C9A227]/5 border border-[#C9A227]/20 rounded-2xl">
+          <div className="flex items-start gap-4">
+            <AlertCircle className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-white">Google Sheets Integration Not Configured</h4>
+              <p className="text-xs text-[#A0A0A0]">
+                Automated inventory synchronization is in safe standby mode. To connect your Google Sheet:
+              </p>
+              <ul className="text-xs text-[#A0A0A0] space-y-1 list-disc pl-4 mt-2">
+                <li>
+                  <span className={syncStatus.spreadsheetConfigured ? 'text-[#3DD598]' : 'text-[#C9A227]'}>
+                    {syncStatus.spreadsheetConfigured ? '✓' : '○'} GOOGLE_SHEET_ID: {syncStatus.spreadsheetConfigured ? 'Configured' : 'Missing'}
+                  </span>
+                </li>
+                <li>
+                  <span className={(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'text-[#3DD598]' : 'text-[#C9A227]'}>
+                    {(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? '✓' : '○'} Google Service Account: {(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'Configured' : 'Missing'}
+                  </span>
+                </li>
+                <li>Target Tab: <code className="text-[#C9A227]">{syncStatus.sheetName || 'Inventory'}</code></li>
+              </ul>
+              <p className="text-[11px] text-[#7A7A7A] pt-1 font-mono">
+                Run <code className="text-white">npx ts-node scripts/test-sync.ts</code> or consult <code className="text-white">SETUP.md §3</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto min-h-[300px]">
         {loading ? (
