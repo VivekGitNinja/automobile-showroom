@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from 'express'
 import multer from 'multer'
+import fs from 'fs'
 import path from 'path'
 import { prisma } from '../config/database'
 import { authMiddleware, AuthRequest } from '../middleware/auth.middleware'
@@ -8,12 +9,18 @@ import { z } from 'zod'
 
 const router = Router()
 
-// Configure multer to save directly to the frontend public directory
+// Configure multer to save to the public/uploads directory
+const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    // The path should be relative to the api directory pointing to frontend/public/uploads
-    const uploadPath = path.join(__dirname, '../../../frontend/public/uploads')
-    cb(null, uploadPath)
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+    cb(null, uploadDir)
   },
   filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)

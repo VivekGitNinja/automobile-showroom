@@ -64,8 +64,8 @@ export class StorageService {
     const thumbKey = `vehicles/thumb-${Date.now()}-${options.filename}`
     let thumbBuffer: Buffer | null = null
 
-    // Generate thumbnail if image
-    if (options.mimeType.startsWith('image/')) {
+    // Generate thumbnail if raster image (skip vector SVGs)
+    if (options.mimeType.startsWith('image/') && !options.mimeType.includes('svg')) {
       try {
         thumbBuffer = await sharp(options.buffer)
           .resize(300, 300, { fit: 'inside' })

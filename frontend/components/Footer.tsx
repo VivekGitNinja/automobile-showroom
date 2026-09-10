@@ -28,13 +28,21 @@ export default function Footer() {
     if (!email || loading) return
     setLoading(true)
     try {
-      await fetch(`${API_BASE_URL}/leads`, {
+      const res = await fetch(`${API_BASE_URL}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, type: 'newsletter' }),
+        body: JSON.stringify({
+          fullName: 'VIP Newsletter Subscriber',
+          email,
+          phone: '+971 4 000 0000',
+          leadType: 'enquiry',
+          message: 'VIP Dispatch / Newsletter Subscription',
+        }),
       })
-      setSuccess(true)
-      setEmail('')
+      if (res.ok) {
+        setSuccess(true)
+        setEmail('')
+      }
     } catch (err) {
       console.error(err)
     } finally {

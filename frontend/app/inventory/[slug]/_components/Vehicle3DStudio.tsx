@@ -3,492 +3,1742 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { Loader2, RotateCcw, Play, Pause, MousePointerClick, Wrench, X } from 'lucide-react'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import {
+  Loader2,
+  RotateCcw,
+  Play,
+  Pause,
+  MousePointerClick,
+  Wrench,
+  X,
+  RotateCw,
+  SunMedium,
+  Moon,
+  Sparkles,
+  Layers,
+  Lightbulb,
+  Maximize2,
+  Volume2,
+  VolumeX,
+  Eye,
+  Sliders,
+  Compass,
+  Zap,
+  Gauge,
+  ShieldAlert,
+  ChevronRight,
+  ShoppingBag,
+  CheckCircle2,
+  Car,
+  Ruler,
+  Crosshair,
+  ArrowLeftRight,
+  ArrowUpDown,
+  Move
+} from 'lucide-react'
 import Link from 'next/link'
-import { Part, PartCategory } from '../../../../lib/types'
+import { Vehicle, Part, PartCategory } from '../../../../lib/types'
 import { API_BASE_URL } from '../../../../lib/api'
 
 // ---------------------------------------------------------------------------
-// Interactive 3D Vehicle Studio
-//
-// A stylized three.js vehicle the visitor can orbit, zoom, repaint and
-// "start". Clickable part hotspots (wheels, brakes, aero, interior) open the
-// matching live spare-parts catalogue from the /parts API — connecting the
-// 3D experience to genuine, staff-managed inventory.
+// Luxury Paint Palettes & Real Clearcoat Shaders
 // ---------------------------------------------------------------------------
-
-const PAINTS = [
-  { name: 'Midnight Onyx', hex: '#0d0d10' },
-  { name: 'Apex Gold', hex: '#C9A227' },
-  { name: 'Rosso Corsa', hex: '#a4161a' },
-  { name: 'Glacier White', hex: '#e8e8ea' },
-  { name: 'British Racing Green', hex: '#1d3b2a' },
-  { name: 'Nardo Grey', hex: '#6a6d70' },
+const LUXURY_PAINTS = [
+  { name: 'Apex Gold', hex: '#C9A227', metallic: 0.85, roughness: 0.22, clearcoat: 1.0 },
+  { name: 'Midnight Onyx', hex: '#0A0A0E', metallic: 0.92, roughness: 0.14, clearcoat: 1.0 },
+  { name: 'Giallo Auge', hex: '#E5A910', metallic: 0.75, roughness: 0.20, clearcoat: 1.0 },
+  { name: 'Rosso Corsa', hex: '#A81418', metallic: 0.70, roughness: 0.18, clearcoat: 1.0 },
+  { name: 'Verde Mantis', hex: '#00A843', metallic: 0.80, roughness: 0.18, clearcoat: 1.0 },
+  { name: 'Viola SE30', hex: '#58157D', metallic: 0.88, roughness: 0.20, clearcoat: 1.0 },
+  { name: 'Blu Nethuns', hex: '#006EAE', metallic: 0.82, roughness: 0.18, clearcoat: 1.0 },
+  { name: 'Glacier Pearl', hex: '#E0E4E8', metallic: 0.50, roughness: 0.12, clearcoat: 1.0 },
 ]
 
-const ZONES = [
-  { id: 'wheels-tyres', label: 'Wheels & Tyres', icon: '○', position: new THREE.Vector3(1.95, 0.35, 0.95) },
-  { id: 'brakes', label: 'Brakes', icon: '◉', position: new THREE.Vector3(-1.95, 0.35, 0.95) },
-  { id: 'exterior-carbon', label: 'Aero & Carbon', icon: '◆', position: new THREE.Vector3(-2.35, 0.55, -0.6) },
-  { id: 'interior-comfort', label: 'Interior', icon: '▤', position: new THREE.Vector3(0.15, 1.05, 0) },
+const LIGHTING_THEMES = [
+  { id: 'gold', label: 'Apex Gold Studio', bg: 0x050508, floorColor: 0x111118, rimColor: 0xc9a227, icon: Sparkles },
+  { id: 'stealth', label: 'Midnight Stealth', bg: 0x030305, floorColor: 0x08080c, rimColor: 0x4a779d, icon: Moon },
+  { id: 'cyber', label: 'Cyberpunk Neon', bg: 0x06020c, floorColor: 0x0a0515, rimColor: 0xec4899, icon: SunMedium },
+  { id: 'daylight', label: 'Daylight High-Key', bg: 0x0a0d14, floorColor: 0x141824, rimColor: 0x38bdf8, icon: Sliders },
+] as const
+
+type LightingThemeId = typeof LIGHTING_THEMES[number]['id']
+
+interface CameraPreset {
+  id: string
+  label: string
+  pos: THREE.Vector3
+  target: THREE.Vector3
+}
+
+const CAMERA_PRESETS: CameraPreset[] = [
+  { id: 'hero', label: 'Hero 3/4', pos: new THREE.Vector3(3.8, 1.8, 5.2), target: new THREE.Vector3(0, 0.4, 0) },
+  { id: 'top', label: 'Top View MCP', pos: new THREE.Vector3(0, 8.2, 0.01), target: new THREE.Vector3(0, 0, 0) },
+  { id: 'front', label: 'Front 0°', pos: new THREE.Vector3(0, 1.15, 5.6), target: new THREE.Vector3(0, 0.5, 0) },
+  { id: 'side', label: 'Profile 90°', pos: new THREE.Vector3(5.6, 1.1, 0), target: new THREE.Vector3(0, 0.45, 0) },
+  { id: 'rear', label: 'Rear Aero 180°', pos: new THREE.Vector3(0, 1.3, -5.6), target: new THREE.Vector3(0, 0.5, 0) },
+  { id: 'cockpit', label: 'Cockpit Driver', pos: new THREE.Vector3(0.22, 1.05, 0.12), target: new THREE.Vector3(0, 0.9, 1.4) },
 ]
 
-export default function Vehicle3DStudio({ vehicleName }: { vehicleName?: string }) {
+export type VehicleArchetype = 'suv' | 'supercar' | 'sedan' | 'coupe'
+
+export function detectArchetype(vehicle?: Vehicle): VehicleArchetype {
+  const custom = ((vehicle?.specsJson as any)?.archetype3d || '').toLowerCase()
+  if (custom === 'suv' || custom === 'supercar' || custom === 'sedan' || custom === 'coupe') {
+    return custom as VehicleArchetype
+  }
+  const body = (vehicle?.bodyType || (vehicle?.specsJson as any)?.bodyType || '').toLowerCase()
+  const make = (vehicle?.make || '').toLowerCase()
+  const model = (vehicle?.model || '').toLowerCase()
+
+  if (
+    body.includes('suv') ||
+    body.includes('4x4') ||
+    body.includes('crossover') ||
+    body.includes('off-road') ||
+    model.includes('g-class') ||
+    model.includes('g63') ||
+    model.includes('g 63') ||
+    model.includes('urus') ||
+    model.includes('cullinan') ||
+    model.includes('range rover') ||
+    model.includes('defender') ||
+    model.includes('cayenne') ||
+    model.includes('bentayga') ||
+    model.includes('dbx')
+  ) {
+    return 'suv'
+  }
+
+  if (
+    body.includes('sedan') ||
+    body.includes('saloon') ||
+    body.includes('limousine') ||
+    make.includes('rolls') ||
+    model.includes('phantom') ||
+    model.includes('ghost') ||
+    model.includes('maybach') ||
+    model.includes('flying spur')
+  ) {
+    return 'sedan'
+  }
+
+  // 3. Supercar / Hypercar priority check
+  if (
+    make.includes('lamborghini') ||
+    make.includes('ferrari') ||
+    make.includes('mclaren') ||
+    make.includes('bugatti') ||
+    make.includes('pagani') ||
+    make.includes('koenigsegg') ||
+    model.includes('aventador') ||
+    model.includes('huracan') ||
+    model.includes('revuelto') ||
+    model.includes('sf90') ||
+    model.includes('296') ||
+    model.includes('f8') ||
+    model.includes('chiron') ||
+    model.includes('senna') ||
+    model.includes('p1') ||
+    model.includes('720s') ||
+    model.includes('750s') ||
+    body.includes('supercar') ||
+    body.includes('hypercar')
+  ) {
+    return 'supercar'
+  }
+
+  // 4. GT Coupe (Porsche 911, Aston Martin DBS, etc.)
+  if (
+    body.includes('coupe') ||
+    make.includes('porsche') ||
+    model.includes('911') ||
+    model.includes('gt3') ||
+    model.includes('vantage') ||
+    model.includes('dbs') ||
+    model.includes('roma') ||
+    model.includes('m8')
+  ) {
+    return 'coupe'
+  }
+
+  return 'supercar'
+}
+
+interface ArchetypeCADSpecs {
+  lengthMm: number
+  widthMm: number
+  heightMm: number
+  wheelbaseMm: number
+  frontTrackMm: number
+  rearTrackMm: number
+  weightDistribution: string
+  dragCoefficient: string
+  groundClearanceMm: number
+  archetypeLabel: string
+}
+
+const ARCHETYPE_CAD_SPECS: Record<VehicleArchetype, ArchetypeCADSpecs> = {
+  suv: {
+    lengthMm: 4817,
+    widthMm: 1984,
+    heightMm: 1969,
+    wheelbaseMm: 2890,
+    frontTrackMm: 1654,
+    rearTrackMm: 1654,
+    weightDistribution: '51% FRONT • 49% REAR',
+    dragCoefficient: 'Cd 0.54 (Aerodynamic Aprons)',
+    groundClearanceMm: 241,
+    archetypeLabel: 'Luxury High-Stance 4x4 Off-Road SUV',
+  },
+  supercar: {
+    lengthMm: 4780,
+    widthMm: 2030,
+    heightMm: 1136,
+    wheelbaseMm: 2700,
+    frontTrackMm: 1720,
+    rearTrackMm: 1680,
+    weightDistribution: '43% FRONT • 57% REAR (Mid-Engine)',
+    dragCoefficient: 'Cd 0.33 (ALA Active Aero)',
+    groundClearanceMm: 100,
+    archetypeLabel: 'Exotic Mid-Engine Hypercar',
+  },
+  sedan: {
+    lengthMm: 5762,
+    widthMm: 2018,
+    heightMm: 1646,
+    wheelbaseMm: 3552,
+    frontTrackMm: 1687,
+    rearTrackMm: 1671,
+    weightDistribution: '50% FRONT • 50% REAR',
+    dragCoefficient: 'Cd 0.38 (Acoustic Double-Glaze)',
+    groundClearanceMm: 150,
+    archetypeLabel: 'Flagship Executive Stately Saloon',
+  },
+  coupe: {
+    lengthMm: 4573,
+    widthMm: 1900,
+    heightMm: 1322,
+    wheelbaseMm: 2457,
+    frontTrackMm: 1591,
+    rearTrackMm: 1557,
+    weightDistribution: '38% FRONT • 62% REAR (Rear-Engine)',
+    dragCoefficient: 'Cd 0.32 (Active DRS Wing)',
+    groundClearanceMm: 105,
+    archetypeLabel: 'Rear-Engine High-Revving GT Coupe',
+  },
+}
+
+interface PartHotspot3D {
+  id: string
+  label: string
+  category: string
+  pos: THREE.Vector3
+  description: string
+  stat: string
+}
+
+const DEFAULT_HOTSPOTS_3D: PartHotspot3D[] = [
+  { id: 'aero-splitter', label: 'Active Carbon Front Splitter', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.35, 2.35), description: 'High-downforce autoclaved carbon fiber splitter with dynamic ground-effect venturis.', stat: '+140kg Front Downforce' },
+  { id: 'brakes-ceramic', label: 'Brembo Carbon-Ceramic Matrix', category: 'brakes', pos: new THREE.Vector3(1.05, 0.42, 1.45), description: '420mm cross-drilled carbon-silicon carbide rotors with 8-piston monobloc calipers.', stat: '100-0 km/h in 29.5m' },
+  { id: 'cockpit-interior', label: 'Bespoke Alcantara & Carbon Cockpit', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.08, 0.1), description: 'Hand-stitched Italian leather, forged carbon console, and digital telemetry display.', stat: 'Bespoke Craftsmanship' },
+  { id: 'powertrain-engine', label: 'V12 Powertrain & Dynamic Induction', category: 'engine-exhaust', pos: new THREE.Vector3(0, 0.92, -1.1), description: 'Naturally aspirated or twin-turbocharged powerplant with valvetronic acoustic mapping.', stat: 'Instant 9000 RPM Throttle' },
+  { id: 'active-rear-wing', label: 'Aero Vectoring Carbon Rear Wing', category: 'exterior-carbon', pos: new THREE.Vector3(0, 1.42, -2.25), description: 'Hydraulically articulated double-element carbon wing with DRS drag reduction.', stat: '850kg High-Speed Load' },
+]
+
+interface Vehicle3DStudioProps {
+  vehicle?: Vehicle
+  vehicleName?: string
+}
+
+export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudioProps) {
   const mountRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<{
-    renderer: THREE.WebGLRenderer
+
+  // Derive vehicle display identity first
+  const displayName = vehicleName || (vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : '2022 Lamborghini Aventador LP 780-4 Ultimae')
+  const make = (vehicle?.make || 'Lamborghini').toLowerCase()
+  const archetype = detectArchetype(vehicle)
+  const cadSpecs = ARCHETYPE_CAD_SPECS[archetype]
+  const isSupercar = archetype === 'supercar'
+
+  const [loading, setLoading] = useState(true)
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  const [loadingText, setLoadingText] = useState('Initializing WebGL 3D Studio...')
+  const [modelType, setModelType] = useState<'glb-real' | 'sculpt-bespoke'>('sculpt-bespoke')
+  const [topViewBlueprint, setTopViewBlueprint] = useState(false)
+  const [showDimensions, setShowDimensions] = useState(true)
+
+  const resolveInitialPaint = () => {
+    const col = (vehicle?.exteriorColor || '').toLowerCase()
+    if (col.includes('red') || col.includes('corsa') || col.includes('rosso')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Rosso Corsa') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('black') || col.includes('onyx') || col.includes('dark') || col.includes('night') || col.includes('phantom')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Midnight Onyx') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('green') || col.includes('mantis') || col.includes('verde')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Verde Mantis') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('yellow') || col.includes('auge') || col.includes('giallo')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Giallo Auge') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('blue') || col.includes('nethuns') || col.includes('blu')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Blu Nethuns') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('white') || col.includes('pearl') || col.includes('glacier')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Glacier Pearl') || LUXURY_PAINTS[0]
+    }
+    if (col.includes('purple') || col.includes('viola')) {
+      return LUXURY_PAINTS.find((p) => p.name === 'Viola SE30') || LUXURY_PAINTS[0]
+    }
+    return LUXURY_PAINTS[0]
+  }
+
+  // Interactive controls state
+  const [currentPaint, setCurrentPaint] = useState(resolveInitialPaint)
+  const [lightingTheme, setLightingTheme] = useState<LightingThemeId>(() => {
+    return make.includes('rolls') ? 'stealth' : 'gold'
+  })
+  const [activeCameraPreset, setActiveCameraPreset] = useState<string>('hero')
+  const [wireframeMode, setWireframeMode] = useState(false)
+  const [headlightsOn, setHeadlightsOn] = useState(true)
+  const [underglowOn, setUnderglowOn] = useState(true)
+  const [doorsOpen, setDoorsOpen] = useState(false)
+  const [hoodOpen, setHoodOpen] = useState(false)
+  const [autoRotate, setAutoRotate] = useState(false)
+  const [engineRunning, setEngineRunning] = useState(false)
+  const [activeHotspot, setActiveHotspot] = useState<PartHotspot3D | null>(null)
+  const [hotspotParts, setHotspotParts] = useState<Part[]>([])
+  const [partsLoading, setPartsLoading] = useState(false)
+
+  // Three.js Scene References
+  const threeRef = useRef<{
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
+    renderer: THREE.WebGLRenderer
     controls: OrbitControls
-    body: THREE.Mesh
-    wheels: THREE.Group[]
-    raf: number
-    zones: { el: HTMLDivElement; vector: THREE.Vector3 }[]
+    carGroup: THREE.Group
+    paintMeshes: THREE.Mesh[]
+    doorLeft?: THREE.Object3D | null
+    doorRight?: THREE.Object3D | null
+    hood?: THREE.Object3D | null
+    wheels: THREE.Object3D[]
+    headlightSpots: THREE.SpotLight[]
+    underglowLights: THREE.PointLight[]
+    exhaustFlames: THREE.Mesh[]
+    floorMesh: THREE.Mesh
+    animFrame: number
+    targetCamPos: THREE.Vector3 | null
+    targetCamLookAt: THREE.Vector3 | null
+    wireframeMaterials: Map<THREE.Mesh, THREE.Material | THREE.Material[]>
   } | null>(null)
 
-  const [ready, setReady] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [paint, setPaint] = useState(PAINTS[0])
-  const [activeZone, setActiveZone] = useState<{ id: string; label: string } | null>(null)
-  const [parts, setParts] = useState<Part[]>([])
-  const [partsLoading, setPartsLoading] = useState(false)
-  const [categories, setCategories] = useState<PartCategory[]>([])
-  const runningRef = useRef(false)
+  // Telemetry Specs
+  const specs = {
+    power: vehicle?.horsepower ? `${vehicle.horsepower} HP` : isSupercar ? '770 HP' : '585 HP',
+    acceleration: vehicle?.acceleration ? `${vehicle.acceleration}s` : isSupercar ? '2.8s (0-100)' : '4.5s (0-100)',
+    topSpeed: vehicle?.topSpeed ? `${vehicle.topSpeed} km/h` : isSupercar ? '355 km/h' : '240 km/h',
+    engine: vehicle?.engine || (isSupercar ? '6.5L Naturally Aspirated V12' : '4.0L Twin-Turbo V8 AMG'),
+    transmission: vehicle?.transmission || (isSupercar ? '7-Speed Dual-Clutch ISR' : 'AMG SPEEDSHIFT 9G-Tronic'),
+  }
 
-  // Load categories for zone → category mapping display
+  // ---------------------------------------------------------------------------
+  // Scene Initialization & Dynamic Vehicle Model Resolution
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    fetch(`${API_BASE_URL}/parts/categories`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setCategories(d?.data || []))
-      .catch(() => {})
-  }, [])
+    if (!mountRef.current) return
+    const container = mountRef.current
+    const width = container.clientWidth || 1200
+    const height = container.clientHeight || 650
 
-  // Fetch parts for the selected zone
-  const openZone = useCallback((zone: { id: string; label: string }) => {
-    setActiveZone(zone)
-    setPartsLoading(true)
-    fetch(`${API_BASE_URL}/parts?category=${zone.id}&limit=6`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setParts(d?.data || []))
-      .catch(() => setParts([]))
-      .finally(() => setPartsLoading(false))
-  }, [])
-
-  // ── three.js scene ─────────────────────────────────────────────────
-  useEffect(() => {
-    const mount = mountRef.current
-    if (!mount) return
-
-    const width = mount.clientWidth
-    const height = mount.clientHeight
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    // 1. Renderer Setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    mount.appendChild(renderer.domElement)
+    renderer.shadowMap.type = THREE.PCFShadowMap
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.25
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    container.innerHTML = ''
+    container.appendChild(renderer.domElement)
 
+    // 2. Scene & Fog
     const scene = new THREE.Scene()
-    scene.fog = new THREE.Fog(0x050505, 14, 30)
+    scene.background = new THREE.Color(0x060608)
+    scene.fog = new THREE.FogExp2(0x060608, 0.045)
 
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100)
-    camera.position.set(6.4, 2.6, 6.8)
-
+    // 3. Camera & Controls
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
+    camera.position.set(3.8, 1.8, 5.2)
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
-    controls.dampingFactor = 0.06
-    controls.minDistance = 4.5
-    controls.maxDistance = 14
-    controls.maxPolarAngle = Math.PI / 2.05
-    controls.target.set(0, 0.6, 0)
+    controls.dampingFactor = 0.05
+    controls.maxPolarAngle = Math.PI / 2 - 0.02 // Don't clip beneath floor
+    controls.minDistance = 1.2
+    controls.maxDistance = 12.0
+    controls.target.set(0, 0.4, 0)
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35))
-    const key = new THREE.DirectionalLight(0xffffff, 1.6)
-    key.position.set(6, 9, 5)
-    key.castShadow = true
-    key.shadow.mapSize.set(1024, 1024)
-    scene.add(key)
-    const rim = new THREE.DirectionalLight(0xc9a227, 1.1)
-    rim.position.set(-7, 4, -6)
-    scene.add(rim)
-    const fill = new THREE.PointLight(0x4455aa, 0.5, 30)
-    fill.position.set(0, 3, -8)
-    scene.add(fill)
+    // 4. Studio Lighting Rig
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85)
+    scene.add(ambientLight)
 
-    // Floor
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(11, 64),
-      new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.35, metalness: 0.6 })
-    )
-    floor.rotation.x = -Math.PI / 2
-    floor.receiveShadow = true
-    scene.add(floor)
+    const mainKeyLight = new THREE.DirectionalLight(0xfffaed, 2.4)
+    mainKeyLight.position.set(5, 8, 4)
+    mainKeyLight.castShadow = true
+    mainKeyLight.shadow.mapSize.width = 2048
+    mainKeyLight.shadow.mapSize.height = 2048
+    mainKeyLight.shadow.bias = -0.0001
+    scene.add(mainKeyLight)
 
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(5.4, 5.5, 96),
-      new THREE.MeshBasicMaterial({ color: 0xc9a227, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
-    )
-    ring.rotation.x = -Math.PI / 2
-    ring.position.y = 0.01
-    scene.add(ring)
+    const fillLight = new THREE.DirectionalLight(0xddeeff, 1.4)
+    fillLight.position.set(-5, 6, -4)
+    scene.add(fillLight)
 
-    // ── Stylized vehicle ─────────────────────────────────────────────
-    const car = new THREE.Group()
+    const rimLight = new THREE.SpotLight(0xc9a227, 4.2, 16, Math.PI / 4, 0.5)
+    rimLight.position.set(0, 6, -5)
+    scene.add(rimLight)
 
-    const bodyMat = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(PAINTS[0].hex),
+    // Overhead soft light for TopView CAD inspection
+    const topLight = new THREE.DirectionalLight(0xffffff, 1.8)
+    topLight.position.set(0, 10, 0)
+    scene.add(topLight)
+
+    // 5. Luxury Turntable Floor
+    const floorGeo = new THREE.CylinderGeometry(5.4, 5.4, 0.12, 64)
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x0c0c12,
+      roughness: 0.18,
+      metalness: 0.88,
+    })
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat)
+    floorMesh.position.y = -0.06
+    floorMesh.receiveShadow = true
+    scene.add(floorMesh)
+
+    // Turntable Halo Ring
+    const haloGeo = new THREE.RingGeometry(4.8, 5.05, 64)
+    const haloMat = new THREE.MeshBasicMaterial({ color: 0xc9a227, side: THREE.DoubleSide })
+    const halo = new THREE.Mesh(haloGeo, haloMat)
+    halo.rotation.x = -Math.PI / 2
+    halo.position.y = 0.002
+    scene.add(halo)
+
+    // 6. Car Hierarchy Setup
+    const carGroup = new THREE.Group()
+    scene.add(carGroup)
+
+    const paintMeshes: THREE.Mesh[] = []
+    const wheels: THREE.Object3D[] = []
+    const headlightSpots: THREE.SpotLight[] = []
+    const underglowLights: THREE.PointLight[] = []
+    const exhaustFlames: THREE.Mesh[] = []
+    let doorLeft: THREE.Object3D | null = null
+    let doorRight: THREE.Object3D | null = null
+    let hood: THREE.Object3D | null = null
+
+    // Underglow point lights beneath the chassis
+    const underglowL = new THREE.PointLight(0xc9a227, 2.5, 4.0)
+    underglowL.position.set(0.8, 0.15, 0)
+    scene.add(underglowL)
+    underglowLights.push(underglowL)
+
+    const underglowR = new THREE.PointLight(0xc9a227, 2.5, 4.0)
+    underglowR.position.set(-0.8, 0.15, 0)
+    scene.add(underglowR)
+    underglowLights.push(underglowR)
+
+    // Headlight Spotlights pointing forward
+    const hlSpotL = new THREE.SpotLight(0xffffff, 3.8, 18, Math.PI / 6, 0.3, 1.2)
+    hlSpotL.position.set(0.65, 0.8, 2.4)
+    hlSpotL.target.position.set(0.65, 0, 8.0)
+    scene.add(hlSpotL)
+    scene.add(hlSpotL.target)
+    headlightSpots.push(hlSpotL)
+
+    const hlSpotR = new THREE.SpotLight(0xffffff, 3.8, 18, Math.PI / 6, 0.3, 1.2)
+    hlSpotR.position.set(-0.65, 0.8, 2.4)
+    hlSpotR.target.position.set(-0.65, 0, 8.0)
+    scene.add(hlSpotR)
+    scene.add(hlSpotR.target)
+    headlightSpots.push(hlSpotR)
+
+    // Base Paint Material
+    const paintMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(currentPaint.hex),
+      metalness: currentPaint.metallic,
+      roughness: currentPaint.roughness,
+      clearcoat: currentPaint.clearcoat,
+      clearcoatRoughness: 0.1,
+      reflectivity: 0.9,
+    })
+
+    // Carbon fiber material for splitters, diffuser, aero
+    const carbonMat = new THREE.MeshStandardMaterial({
+      color: 0x18181c,
+      roughness: 0.35,
       metalness: 0.85,
-      roughness: 0.28,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.08,
     })
+
+    // Glass material for windshield and windows
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0b0d10,
-      metalness: 0.9,
-      roughness: 0.05,
-      transmission: 0.6,
+      color: 0x111625,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.45,
+      roughness: 0.05,
+      metalness: 0.9,
+      transmission: 0.85,
+      ior: 1.5,
     })
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x141414, metalness: 0.6, roughness: 0.5 })
 
-    // Main body — low, wide silhouette
-    const body = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.62, 1.95), bodyMat)
-    body.position.y = 0.72
-    body.castShadow = true
-    car.add(body)
+    // Chrome & Metallic Accent Material
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      metalness: 0.98,
+      roughness: 0.06,
+    })
 
-    // Nose taper
-    const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.98, 1.1, 4, 1), bodyMat)
-    nose.rotation.z = Math.PI / 2
-    nose.rotation.x = Math.PI / 4
-    nose.scale.set(1, 1, 1.63)
-    nose.position.set(-2.55, 0.68, 0)
-    nose.castShadow = true
-    car.add(nose)
+    // Satin Black Trim Material
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0x111115,
+      roughness: 0.5,
+      metalness: 0.5,
+    })
 
-    // Cabin
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 1.65), glassMat)
-    cabin.position.set(0.1, 1.28, 0)
-    cabin.castShadow = true
-    car.add(cabin)
+    // Glowing LED material
+    const ledWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+    const ledAmberMat = new THREE.MeshBasicMaterial({ color: 0xffa500 })
+    const ledRedMat = new THREE.MeshBasicMaterial({ color: 0xff1e28 })
 
-    // Cabin roof
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.09, 1.5), bodyMat)
-    roof.position.set(0.1, 1.58, 0)
-    car.add(roof)
+    // -------------------------------------------------------------------------
+    // ARCHETYPE 1: LUXURY SUV & 4X4 (MERCEDES-BENZ G-CLASS / G-WAGON / URUS)
+    // -------------------------------------------------------------------------
+    const buildSUVVehicleSculpt = () => {
+      setModelType('sculpt-bespoke')
+      setLoadingText('Assembling authentic high-stance Luxury SUV digital twin...')
 
-    // Rear haunch
-    const haunch = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 1.85), bodyMat)
-    haunch.position.set(1.95, 0.95, 0)
-    haunch.rotation.z = 0.09
-    haunch.castShadow = true
-    car.add(haunch)
+      // 1. Elevated Ladder Chassis & Undercarriage
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, 4.4), trimMat)
+      chassis.position.set(0, 0.45, 0)
+      carGroup.add(chassis)
 
-    // Rear wing (aero)
-    const wingPost = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.06), darkMat)
-    wingPost.position.set(2.3, 1.35, 0.6)
-    car.add(wingPost)
-    const wingPost2 = wingPost.clone()
-    wingPost2.position.z = -0.6
-    car.add(wingPost2)
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.05, 2.0), darkMat)
-    wing.position.set(2.35, 1.52, 0)
-    wing.castShadow = true
-    car.add(wing)
+      // 2. Main Lower SUV Body & High Shoulder Line
+      const mainBody = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.76, 4.45), paintMaterial)
+      mainBody.position.set(0, 0.86, 0.05)
+      mainBody.castShadow = true
+      carGroup.add(mainBody)
+      paintMeshes.push(mainBody)
 
-    // Headlights
-    const headlightMat = new THREE.MeshBasicMaterial({ color: 0xd8e6ff })
-    const hlL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.09, 0.4), headlightMat)
-    hlL.position.set(-3.05, 0.78, 0.62)
-    car.add(hlL)
-    const hlR = hlL.clone()
-    hlR.position.z = -0.62
-    car.add(hlR)
+      // Power-dome Hood with Center Crease
+      const hoodMesh = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.12, 1.45), paintMaterial)
+      hoodMesh.position.set(0, 1.3, 1.4)
+      hoodMesh.castShadow = true
+      carGroup.add(hoodMesh)
+      paintMeshes.push(hoodMesh)
+      hood = hoodMesh
 
-    // Taillight bar
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 1.7), new THREE.MeshBasicMaterial({ color: 0xff2222 }))
-    tail.position.set(2.85, 0.95, 0)
-    car.add(tail)
+      // Signature G-Class Top Fender Amber Turn Signal Repeaters
+      const turnL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.22), ledAmberMat)
+      turnL.position.set(0.86, 1.34, 1.7)
+      carGroup.add(turnL)
 
-    // Wheels
-    const wheels: THREE.Group[] = []
-    const tyreMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 })
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x9a9a9f, metalness: 0.95, roughness: 0.2 })
-    const caliperMat = new THREE.MeshStandardMaterial({ color: 0xc9a227, metalness: 0.4, roughness: 0.4 })
+      const turnR = turnL.clone()
+      turnR.position.x = -0.86
+      carGroup.add(turnR)
 
-    const wheelPositions: [number, number][] = [
-      [-1.55, 0.98], [-1.55, -0.98], [1.55, 0.98], [1.55, -0.98],
-    ]
-    for (const [wx, wz] of wheelPositions) {
-      const wheel = new THREE.Group()
-      const tyre = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.16, 16, 40), tyreMat)
-      tyre.rotation.y = Math.PI / 2
-      tyre.castShadow = true
-      wheel.add(tyre)
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.18, 24), rimMat)
-      rim.rotation.z = Math.PI / 2
-      wheel.add(rim)
-      for (let s = 0; s < 5; s++) {
-        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.68, 0.05), rimMat)
-        spoke.rotation.x = (s * Math.PI * 2) / 5
-        wheel.add(spoke)
+      // 3. Upright Iconic G-Wagon Cabin
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.96, 2.75), paintMaterial)
+      cabin.position.set(0, 1.68, -0.32)
+      cabin.castShadow = true
+      carGroup.add(cabin)
+      paintMeshes.push(cabin)
+
+      // Tinted Glass Windows (Front, Sides, Rear)
+      const frontWindshield = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.78, 0.06), glassMat)
+      frontWindshield.rotation.x = -0.15
+      frontWindshield.position.set(0, 1.72, 0.98)
+      carGroup.add(frontWindshield)
+
+      const sideGlassL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 2.5), glassMat)
+      sideGlassL.position.set(0.9, 1.7, -0.32)
+      carGroup.add(sideGlassL)
+
+      const sideGlassR = sideGlassL.clone()
+      sideGlassR.position.x = -0.9
+      carGroup.add(sideGlassR)
+
+      const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.74, 0.06), glassMat)
+      rearWindow.position.set(0, 1.7, -1.71)
+      carGroup.add(rearWindow)
+
+      // Flat Roof with Dual Longitudinal Roof Rails
+      const railL = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.6, 16), chromeMat)
+      railL.rotation.x = Math.PI / 2
+      railL.position.set(0.75, 2.22, -0.32)
+      carGroup.add(railL)
+
+      const railR = railL.clone()
+      railR.position.x = -0.75
+      carGroup.add(railR)
+
+      // 4. Muscular Flared Boxy Wheel Arches (AMG Fender Flares)
+      const archFL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.44, 1.15), paintMaterial)
+      archFL.position.set(1.04, 0.75, 1.4)
+      carGroup.add(archFL)
+      paintMeshes.push(archFL)
+
+      const archFR = archFL.clone()
+      archFR.position.x = -1.04
+      carGroup.add(archFR)
+      paintMeshes.push(archFR)
+
+      const archRL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.44, 1.15), paintMaterial)
+      archRL.position.set(1.04, 0.75, -1.35)
+      carGroup.add(archRL)
+      paintMeshes.push(archRL)
+
+      const archRR = archRL.clone()
+      archRR.position.x = -1.04
+      carGroup.add(archRR)
+      paintMeshes.push(archRR)
+
+      // 5. Upright Panamericana Radiator Grille & Mercedes Star
+      const grilleFrame = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.58, 0.12), chromeMat)
+      grilleFrame.position.set(0, 0.94, 2.28)
+      carGroup.add(grilleFrame)
+
+      const grilleInner = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.5, 0.14), trimMat)
+      grilleInner.position.set(0, 0.94, 2.28)
+      carGroup.add(grilleInner)
+
+      // Vertical Panamericana chrome slats
+      for (let i = -4; i <= 4; i++) {
+        const slat = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.46, 0.04), chromeMat)
+        slat.position.set(i * 0.12, 0.94, 2.36)
+        carGroup.add(slat)
       }
-      const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.3, 0.16), caliperMat)
-      caliper.position.set(0.05, 0.28, 0)
-      wheel.add(caliper)
-      wheel.position.set(wx, 0.52, wz)
-      car.add(wheel)
-      wheels.push(wheel)
+
+      // Central Star Emblem
+      const starCircle = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 16, 32), chromeMat)
+      starCircle.position.set(0, 0.94, 2.38)
+      carGroup.add(starCircle)
+
+      // 6. Dual Iconic Round LED Projector Headlamps with Glowing DRL Halos
+      const haloL = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 16, 32), ledWhiteMat)
+      haloL.position.set(0.72, 0.94, 2.28)
+      carGroup.add(haloL)
+
+      const bulbL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), ledWhiteMat)
+      bulbL.position.set(0.72, 0.94, 2.26)
+      carGroup.add(bulbL)
+
+      const haloR = haloL.clone()
+      haloR.position.x = -0.72
+      carGroup.add(haloR)
+
+      const bulbR = bulbL.clone()
+      bulbR.position.x = -0.72
+      carGroup.add(bulbR)
+
+      // 7. Rugged Front Bumper & Skid Plate
+      const bumperFront = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.32, 0.45), trimMat)
+      bumperFront.position.set(0, 0.46, 2.22)
+      carGroup.add(bumperFront)
+
+      const skidPlate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.15, 0.46), chromeMat)
+      skidPlate.position.set(0, 0.35, 2.24)
+      carGroup.add(skidPlate)
+
+      // 8. Heavy-Duty Side Running Boards & AMG Side-Exit Dual Exhausts
+      const stepL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 2.4), chromeMat)
+      stepL.position.set(1.05, 0.38, 0.02)
+      carGroup.add(stepL)
+
+      const stepR = stepL.clone()
+      stepR.position.x = -1.05
+      carGroup.add(stepR)
+
+      // AMG Dual Side-Exit Exhaust Tips (Left & Right before rear wheels)
+      const tipL1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 16), chromeMat)
+      tipL1.rotation.z = Math.PI / 2
+      tipL1.position.set(1.08, 0.32, -0.65)
+      carGroup.add(tipL1)
+
+      const tipL2 = tipL1.clone()
+      tipL2.position.z = -0.76
+      carGroup.add(tipL2)
+
+      const tipR1 = tipL1.clone()
+      tipR1.position.x = -1.08
+      carGroup.add(tipR1)
+
+      const tipR2 = tipL2.clone()
+      tipR2.position.x = -1.08
+      carGroup.add(tipR2)
+
+      // 9. Iconic Rear-Mounted Full-Size Spare Wheel Carrier
+      const spareRing = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.07, 16, 32), chromeMat)
+      spareRing.position.set(0, 1.25, -2.25)
+      carGroup.add(spareRing)
+
+      const spareCover = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.12, 32), paintMaterial)
+      spareCover.rotation.x = Math.PI / 2
+      spareCover.position.set(0, 1.25, -2.23)
+      spareCover.castShadow = true
+      carGroup.add(spareCover)
+      paintMeshes.push(spareCover)
+
+      const spareBadge = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 16, 32), chromeMat)
+      spareBadge.position.set(0, 1.25, -2.31)
+      carGroup.add(spareBadge)
+
+      // Rear Horizontal Taillights on Bumper
+      const tailL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.06), ledRedMat)
+      tailL.position.set(0.68, 0.58, -2.22)
+      carGroup.add(tailL)
+
+      const tailR = tailL.clone()
+      tailR.position.x = -0.68
+      carGroup.add(tailR)
+
+      // 10. Massive 22-Inch AMG Cross-Spoke Wheels with High-Profile Tires & Red Calipers
+      const wheelPositions = [
+        { x: 1.02, y: 0.54, z: 1.4 },
+        { x: -1.02, y: 0.54, z: 1.4 },
+        { x: 1.02, y: 0.54, z: -1.35 },
+        { x: -1.02, y: 0.54, z: -1.35 },
+      ]
+
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x16161a, roughness: 0.85, metalness: 0.15 })
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x222228, roughness: 0.25, metalness: 0.95 })
+      const caliperMat = new THREE.MeshStandardMaterial({ color: 0xdd121a, roughness: 0.3, metalness: 0.7 })
+
+      wheelPositions.forEach((wp) => {
+        const wheelGroup = new THREE.Group()
+        wheelGroup.position.set(wp.x, wp.y, wp.z)
+
+        // All-Terrain Thick Tire
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.34, 32), tireMat)
+        tire.rotation.z = Math.PI / 2
+        tire.castShadow = true
+        wheelGroup.add(tire)
+
+        // Rim
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.35, 24), rimMat)
+        rim.rotation.z = Math.PI / 2
+        wheelGroup.add(rim)
+
+        // Red AMG Caliper
+        const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.12), caliperMat)
+        caliper.position.set(wp.x > 0 ? -0.08 : 0.08, 0.18, 0)
+        wheelGroup.add(caliper)
+
+        carGroup.add(wheelGroup)
+        wheels.push(wheelGroup)
+      })
+
+      setLoading(false)
     }
 
-    scene.add(car)
+    // -------------------------------------------------------------------------
+    // ARCHETYPE 2: STATELY EXECUTIVE SALOON (ROLLS-ROYCE PHANTOM / MAYBACH)
+    // -------------------------------------------------------------------------
+    const buildSedanVehicleSculpt = () => {
+      setModelType('sculpt-bespoke')
+      setLoadingText('Assembling Stately Executive Saloon architecture...')
 
-    // ── Zone hotspots (HTML overlays projected each frame) ──────────
-    const zoneEls: { el: HTMLDivElement; vector: THREE.Vector3 }[] = []
-    for (const zone of ZONES) {
-      const el = document.createElement('div')
-      el.className = 'v3d-zone'
-      el.innerHTML = `<span>${zone.icon}</span><em>${zone.label}</em>`
-      el.style.cssText = 'position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(8,8,8,0.85);border:1px solid rgba(201,162,39,0.5);color:#e8e8ea;font:600 10px ui-monospace,monospace;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;user-select:none;backdrop-filter:blur(6px);transition:background 0.2s,border-color 0.2s;white-space:nowrap;z-index:5'
-      el.addEventListener('mouseenter', () => { el.style.background = 'rgba(201,162,39,0.9)'; el.style.color = '#0a0a0a' })
-      el.addEventListener('mouseleave', () => { el.style.background = 'rgba(8,8,8,0.85)'; el.style.color = '#e8e8ea' })
-      el.addEventListener('click', (e) => { e.stopPropagation(); openZoneRef.current(zone) })
-      mount.appendChild(el)
-      zoneEls.push({ el, vector: zone.position.clone() })
+      const bodyMain = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.82, 5.2), paintMaterial)
+      bodyMain.position.set(0, 0.68, 0)
+      bodyMain.castShadow = true
+      carGroup.add(bodyMain)
+      paintMeshes.push(bodyMain)
+
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.74, 2.9), paintMaterial)
+      cabin.position.set(0, 1.34, -0.3)
+      cabin.castShadow = true
+      carGroup.add(cabin)
+      paintMeshes.push(cabin)
+
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(1.76, 0.66, 2.8), glassMat)
+      glass.position.set(0, 1.34, -0.3)
+      carGroup.add(glass)
+
+      // Imposing Chrome Pantheon Grille
+      const grille = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 0.12), chromeMat)
+      grille.position.set(0, 0.74, 2.62)
+      carGroup.add(grille)
+
+      // Spirit of Ecstasy Mascot
+      const mascot = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.14, 12), chromeMat)
+      mascot.position.set(0, 1.16, 2.56)
+      carGroup.add(mascot)
+
+      // Stately Wheels
+      const wp = [
+        { x: 0.98, y: 0.44, z: 1.6 },
+        { x: -0.98, y: 0.44, z: 1.6 },
+        { x: 0.98, y: 0.44, z: -1.6 },
+        { x: -0.98, y: 0.44, z: -1.6 },
+      ]
+      wp.forEach((p) => {
+        const wg = new THREE.Group()
+        wg.position.set(p.x, p.y, p.z)
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 32), trimMat)
+        tire.rotation.z = Math.PI / 2
+        wg.add(tire)
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.29, 24), chromeMat)
+        rim.rotation.z = Math.PI / 2
+        wg.add(rim)
+        carGroup.add(wg)
+        wheels.push(wg)
+      })
+
+      setLoading(false)
     }
 
-    // ── Render loop ──────────────────────────────────────────────────
-    let raf = 0
-    const clock = new THREE.Clock()
-    const projected = new THREE.Vector3()
+    // -------------------------------------------------------------------------
+    // ARCHETYPE 3: REAR-ENGINE SPORTS COUPE / GT (PORSCHE 911 / ASTON MARTIN)
+    // -------------------------------------------------------------------------
+    const buildCoupeVehicleSculpt = () => {
+      setModelType('sculpt-bespoke')
+      setLoadingText('Assembling Teardrop Aerodynamic GT Coupe architecture...')
 
-    const tick = () => {
-      raf = requestAnimationFrame(tick)
-      const dt = clock.getDelta()
+      const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(1.88, 0.54, 4.4), paintMaterial)
+      lowerBody.position.set(0, 0.52, 0)
+      lowerBody.castShadow = true
+      carGroup.add(lowerBody)
+      paintMeshes.push(lowerBody)
 
-      if (runningRef.current) {
-        for (const w of wheels) w.rotation.x -= dt * 9
-        car.position.y = Math.sin(clock.elapsedTime * 22) * 0.006
-        hlL.visible = Math.floor(clock.elapsedTime * 2) % 2 === 0
-      } else {
-        car.position.y = 0
-      }
+      // Sloping aerodynamic flyline cabin
+      const cabin = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.9, 2.2, 32), paintMaterial)
+      cabin.rotation.x = Math.PI / 2
+      cabin.position.set(0, 1.08, -0.25)
+      cabin.castShadow = true
+      carGroup.add(cabin)
+      paintMeshes.push(cabin as any)
 
-      controls.update()
-      renderer.render(scene, camera)
+      const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.91, 2.15, 32), glassMat)
+      glass.rotation.x = Math.PI / 2
+      glass.position.set(0, 1.08, -0.25)
+      carGroup.add(glass)
 
-      // Project zone anchors to screen space, then greedily resolve overlaps
-      // so labels never collide at any camera angle.
-      const rect = renderer.domElement.getBoundingClientRect()
-      const placed: { x: number; y: number; w: number; h: number }[] = []
-      for (const z of zoneEls) {
-        projected.copy(z.vector)
-        projected.project(camera)
-        const x = (projected.x * 0.5 + 0.5) * rect.width
-        const y = (-projected.y * 0.5 + 0.5) * rect.height
-        const visible = projected.z < 1
-        z.el.style.display = visible ? 'flex' : 'none'
-        if (!visible) continue
-        const w = z.el.offsetWidth || 120
-        const h = z.el.offsetHeight || 30
-        let px = x
-        let py = y
-        let guard = 0
-        while (guard < 20 && placed.some((r) => Math.abs(r.x - px) < (r.w + w) / 2 + 8 && Math.abs(r.y - py) < (r.h + h) / 2 + 6)) {
-          py += h + 10
-          guard++
+      // Wide muscular rear haunches
+      const haunchL = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 1.45), paintMaterial)
+      haunchL.position.set(0.92, 0.66, -0.92)
+      carGroup.add(haunchL)
+      paintMeshes.push(haunchL)
+
+      const haunchR = haunchL.clone()
+      haunchR.position.x = -0.92
+      carGroup.add(haunchR)
+      paintMeshes.push(haunchR)
+
+      // Horizontal rear LED light strip
+      const lightBar = new THREE.Mesh(new THREE.BoxGeometry(1.64, 0.05, 0.08), ledRedMat)
+      lightBar.position.set(0, 0.74, -2.21)
+      carGroup.add(lightBar)
+
+      // Sports Wheels
+      const wp = [
+        { x: 0.95, y: 0.42, z: 1.35 },
+        { x: -0.95, y: 0.42, z: 1.35 },
+        { x: 0.98, y: 0.44, z: -1.3 },
+        { x: -0.98, y: 0.44, z: -1.3 },
+      ]
+      wp.forEach((p) => {
+        const wg = new THREE.Group()
+        wg.position.set(p.x, p.y, p.z)
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 32), trimMat)
+        tire.rotation.z = Math.PI / 2
+        wg.add(tire)
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.31, 24), carbonMat)
+        rim.rotation.z = Math.PI / 2
+        wg.add(rim)
+        carGroup.add(wg)
+        wheels.push(wg)
+      })
+
+      setLoading(false)
+    }
+
+    // -------------------------------------------------------------------------
+    // ARCHETYPE 4: EXOTIC SUPERCAR / HYPERCAR WEDGE (FALLBACK SCULPT)
+    // -------------------------------------------------------------------------
+    const buildSupercarVehicleSculpt = () => {
+      setModelType('sculpt-bespoke')
+      setLoadingText('Assembling Exotic Aerodynamic Hypercar architecture...')
+
+      const lowerWedge = new THREE.Mesh(new THREE.BoxGeometry(1.98, 0.48, 4.6), paintMaterial)
+      lowerWedge.position.set(0, 0.48, 0)
+      lowerWedge.castShadow = true
+      carGroup.add(lowerWedge)
+      paintMeshes.push(lowerWedge)
+
+      const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.58, 2.2), glassMat)
+      canopy.position.set(0, 0.98, -0.15)
+      canopy.castShadow = true
+      carGroup.add(canopy)
+
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.08, 1.6), paintMaterial)
+      roof.position.set(0, 1.28, -0.25)
+      carGroup.add(roof)
+      paintMeshes.push(roof)
+
+      const splitter = new THREE.Mesh(new THREE.BoxGeometry(1.98, 0.06, 0.6), carbonMat)
+      splitter.position.set(0, 0.22, 2.25)
+      carGroup.add(splitter)
+
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.06, 0.45), carbonMat)
+      wing.position.set(0, 1.35, -2.2)
+      carGroup.add(wing)
+
+      const wp = [
+        { x: 1.0, y: 0.38, z: 1.4 },
+        { x: -1.0, y: 0.38, z: 1.4 },
+        { x: 1.02, y: 0.42, z: -1.4 },
+        { x: -1.02, y: 0.42, z: -1.4 },
+      ]
+      wp.forEach((p) => {
+        const wg = new THREE.Group()
+        wg.position.set(p.x, p.y, p.z)
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3, 32), trimMat)
+        tire.rotation.z = Math.PI / 2
+        wg.add(tire)
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.31, 24), carbonMat)
+        rim.rotation.z = Math.PI / 2
+        wg.add(rim)
+        carGroup.add(wg)
+        wheels.push(wg)
+      })
+
+      setLoading(false)
+    }
+
+    // -------------------------------------------------------------------------
+    // Model Resolution: Check for GLB or route to authentic archetype
+    // -------------------------------------------------------------------------
+    const explicitGlb = vehicle?.model3dUrl || (vehicle?.specsJson as any)?.model3dUrl
+
+    if (archetype === 'suv') {
+      // For SUV (G-Class, Urus, Cullinan), render our authentic luxury SUV model
+      buildSUVVehicleSculpt()
+    } else if (archetype === 'sedan') {
+      buildSedanVehicleSculpt()
+    } else if (archetype === 'coupe') {
+      buildCoupeVehicleSculpt()
+    } else {
+      // Supercar / Hypercar: try high-poly GLB with DRACOLoader
+      const glbTarget = explicitGlb || '/models/CarConcept.glb'
+      setLoadingText('Streaming high-fidelity 3D vehicle model...')
+
+      const loader = new GLTFLoader()
+      const dracoLoader = new DRACOLoader()
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+      loader.setDRACOLoader(dracoLoader)
+
+      loader.load(
+        glbTarget,
+        (gltf) => {
+          setModelType('glb-real')
+          const model = gltf.scene
+          model.scale.set(1.1, 1.1, 1.1)
+          model.position.set(0, 0, 0)
+
+          model.traverse((child: any) => {
+            if (child.isMesh) {
+              child.castShadow = true
+              child.receiveShadow = true
+
+              const name = (child.name || '').toLowerCase()
+              if (
+                name.includes('body') ||
+                name.includes('door') ||
+                name.includes('hood') ||
+                name.includes('panel') ||
+                name.includes('color1')
+              ) {
+                child.material = paintMaterial
+                paintMeshes.push(child)
+              }
+            }
+
+            if (child.name === 'BodyDoorLColor1' || child.name.includes('DoorL') || child.name.includes('Door_L')) {
+              doorLeft = child
+            }
+            if (child.name === 'BodyDoorRColor1' || child.name.includes('DoorR') || child.name.includes('Door_R')) {
+              doorRight = child
+            }
+            if (child.name === 'BodyHood' || child.name.includes('Hood') || child.name.includes('Bonnet')) {
+              hood = child
+            }
+            if (child.name.includes('Wheel') || child.name.includes('wheel')) {
+              wheels.push(child)
+            }
+          })
+
+          carGroup.add(model)
+          setLoading(false)
+        },
+        (xhr) => {
+          if (xhr.lengthComputable) {
+            setLoadingProgress(Math.round((xhr.loaded / xhr.total) * 100))
+          }
+        },
+        (err) => {
+          console.warn('GLB load error, falling back to supercar sculpt:', err)
+          buildSupercarVehicleSculpt()
         }
-        z.el.style.left = `${px}px`
-        z.el.style.top = `${py}px`
-        placed.push({ x: px, y: py, w, h })
+      )
+    }
+
+    // Store state in ref
+    threeRef.current = {
+      scene,
+      camera,
+      renderer,
+      controls,
+      carGroup,
+      paintMeshes,
+      doorLeft,
+      doorRight,
+      hood,
+      wheels,
+      headlightSpots,
+      underglowLights,
+      exhaustFlames,
+      floorMesh,
+      animFrame: 0,
+      targetCamPos: null,
+      targetCamLookAt: null,
+      wireframeMaterials: new Map(),
+    }
+
+    // -------------------------------------------------------------------------
+    // Animation & Render Loop
+    // -------------------------------------------------------------------------
+    let angle = 0
+    const animate = () => {
+      const ref = threeRef.current
+      if (!ref) return
+
+      ref.controls.update()
+
+      // Smooth camera interpolation
+      if (ref.targetCamPos) {
+        ref.camera.position.lerp(ref.targetCamPos, 0.08)
+        if (ref.camera.position.distanceTo(ref.targetCamPos) < 0.05) {
+          ref.targetCamPos = null
+        }
       }
-    }
-    tick()
+      if (ref.targetCamLookAt) {
+        ref.controls.target.lerp(ref.targetCamLookAt, 0.08)
+        if (ref.controls.target.distanceTo(ref.targetCamLookAt) < 0.05) {
+          ref.targetCamLookAt = null
+        }
+      }
 
-    const onResize = () => {
-      if (!mount) return
-      const w = mount.clientWidth
-      const h = mount.clientHeight
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
-      renderer.setSize(w, h)
-    }
-    window.addEventListener('resize', onResize)
+      // Turntable auto-rotate
+      if (autoRotate && ref.carGroup) {
+        ref.carGroup.rotation.y += 0.005
+      }
 
-    sceneRef.current = { renderer, scene, camera, controls, body, wheels, raf, zones: zoneEls }
-    setReady(true)
+      // Engine rumble vibration & exhaust flame flicker
+      if (engineRunning) {
+        angle += 0.4
+        ref.carGroup.position.y = Math.sin(angle) * 0.008
+        ref.exhaustFlames.forEach((flame) => {
+          flame.visible = true
+          flame.scale.set(0.9 + Math.random() * 0.3, 0.8 + Math.random() * 0.5, 0.9 + Math.random() * 0.3)
+        })
+      } else {
+        ref.carGroup.position.y = 0
+        ref.exhaustFlames.forEach((flame) => (flame.visible = false))
+      }
+
+      ref.renderer.render(ref.scene, ref.camera)
+      ref.animFrame = requestAnimationFrame(animate)
+    }
+
+    threeRef.current.animFrame = requestAnimationFrame(animate)
+
+    const handleResize = () => {
+      if (!mountRef.current || !threeRef.current) return
+      const w = mountRef.current.clientWidth
+      const h = mountRef.current.clientHeight
+      threeRef.current.camera.aspect = w / h
+      threeRef.current.camera.updateProjectionMatrix()
+      threeRef.current.renderer.setSize(w, h)
+    }
+    window.addEventListener('resize', handleResize)
 
     return () => {
-      cancelAnimationFrame(raf)
-      window.removeEventListener('resize', onResize)
-      controls.dispose()
-      renderer.dispose()
-      for (const z of zoneEls) z.el.remove()
-      scene.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          obj.geometry.dispose()
-          const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
-          for (const m of mats) m.dispose()
-        }
-      })
-      if (renderer.domElement.parentElement === mount) mount.removeChild(renderer.domElement)
-      sceneRef.current = null
+      window.removeEventListener('resize', handleResize)
+      if (threeRef.current) {
+        cancelAnimationFrame(threeRef.current.animFrame)
+        renderer.dispose()
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [vehicle, displayName, isSupercar, make, archetype])
 
-  // Keep the render loop informed of the running state without rebuilding the scene
-  useEffect(() => {
-    runningRef.current = running
-  }, [running])
+  // ---------------------------------------------------------------------------
+  // Paint Swatch Handler
+  // ---------------------------------------------------------------------------
+  const handleSelectPaint = (paint: typeof LUXURY_PAINTS[0]) => {
+    setCurrentPaint(paint)
+    if (!threeRef.current) return
+    const color = new THREE.Color(paint.hex)
 
-  const openZoneRef = useRef(openZone)
-  useEffect(() => {
-    openZoneRef.current = openZone
-  }, [openZone])
+    threeRef.current.paintMeshes.forEach((mesh) => {
+      if (mesh.material && (mesh.material as any).color) {
+        ;(mesh.material as any).color.set(color)
+        if ('metalness' in mesh.material) (mesh.material as any).metalness = paint.metallic
+        if ('roughness' in mesh.material) (mesh.material as any).roughness = paint.roughness
+      }
+    })
 
-  const applyPaint = (p: typeof PAINTS[number]) => {
-    setPaint(p)
-    const s = sceneRef.current
-    if (s) (s.body.material as THREE.MeshPhysicalMaterial).color.set(p.hex)
+    // Match underglow light to paint color
+    threeRef.current.underglowLights.forEach((light) => light.color.set(color))
+  }
+
+  // ---------------------------------------------------------------------------
+  // Camera Preset Navigation & TopView MCP
+  // ---------------------------------------------------------------------------
+  const handleCameraPreset = (preset: CameraPreset) => {
+    setActiveCameraPreset(preset.id)
+    if (!threeRef.current) return
+
+    if (preset.id === 'top') {
+      setTopViewBlueprint(true)
+      setAutoRotate(false)
+      if (threeRef.current.carGroup) {
+        threeRef.current.carGroup.rotation.y = 0
+      }
+      threeRef.current.camera.up.set(0, 0, -1)
+      threeRef.current.controls.target.set(0, 0, 0)
+      threeRef.current.targetCamPos = new THREE.Vector3(0, 8.2, 0.001)
+      threeRef.current.targetCamLookAt = new THREE.Vector3(0, 0, 0)
+    } else {
+      setTopViewBlueprint(false)
+      threeRef.current.camera.up.set(0, 1, 0)
+      threeRef.current.targetCamPos = preset.pos.clone()
+      threeRef.current.targetCamLookAt = preset.target.clone()
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lighting Theme Switcher
+  // ---------------------------------------------------------------------------
+  const handleLightingTheme = (themeId: LightingThemeId) => {
+    setLightingTheme(themeId)
+    if (!threeRef.current) return
+    const theme = LIGHTING_THEMES.find((t) => t.id === themeId)
+    if (!theme) return
+
+    threeRef.current.scene.background = new THREE.Color(theme.bg)
+    if (threeRef.current.scene.fog) {
+      threeRef.current.scene.fog.color = new THREE.Color(theme.bg)
+    }
+    ;(threeRef.current.floorMesh.material as THREE.MeshStandardMaterial).color.set(theme.floorColor)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Animated Doors & Hood Toggle
+  // ---------------------------------------------------------------------------
+  const handleToggleDoors = () => {
+    const nextState = !doorsOpen
+    setDoorsOpen(nextState)
+    if (!threeRef.current) return
+
+    const { doorLeft, doorRight } = threeRef.current
+    if (doorLeft) {
+      doorLeft.rotation.z = nextState ? 0.95 : 0
+      doorLeft.rotation.x = nextState ? 0.35 : 0
+    }
+    if (doorRight) {
+      doorRight.rotation.z = nextState ? -0.95 : 0
+      doorRight.rotation.x = nextState ? 0.35 : 0
+    }
+  }
+
+  const handleToggleHood = () => {
+    const nextState = !hoodOpen
+    setHoodOpen(nextState)
+    if (!threeRef.current) return
+
+    const { hood } = threeRef.current
+    if (hood) {
+      hood.rotation.x = nextState ? -0.85 : 0
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Wireframe / X-Ray Engineering Inspection
+  // ---------------------------------------------------------------------------
+  const handleToggleWireframe = () => {
+    const next = !wireframeMode
+    setWireframeMode(next)
+    if (!threeRef.current) return
+
+    threeRef.current.paintMeshes.forEach((mesh) => {
+      if (next) {
+        threeRef.current?.wireframeMaterials.set(mesh, mesh.material)
+        mesh.material = new THREE.MeshBasicMaterial({
+          color: 0x00f0ff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.6,
+        })
+      } else {
+        const original = threeRef.current?.wireframeMaterials.get(mesh)
+        if (original) mesh.material = original
+      }
+    })
+  }
+
+  // ---------------------------------------------------------------------------
+  // Headlights & Underglow Toggle
+  // ---------------------------------------------------------------------------
+  const handleToggleHeadlights = () => {
+    const next = !headlightsOn
+    setHeadlightsOn(next)
+    threeRef.current?.headlightSpots.forEach((spot) => (spot.visible = next))
+  }
+
+  const handleToggleUnderglow = () => {
+    const next = !underglowOn
+    setUnderglowOn(next)
+    threeRef.current?.underglowLights.forEach((light) => (light.visible = next))
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3D Spatial Part Hotspot Selection
+  // ---------------------------------------------------------------------------
+  const handleSelectHotspot = (hs: PartHotspot3D) => {
+    setActiveHotspot(hs)
+    if (!threeRef.current) return
+
+    const target = hs.pos.clone()
+    const offset = new THREE.Vector3(target.x > 0 ? 1.8 : -1.8, target.y + 0.8, target.z + 1.8)
+    threeRef.current.targetCamPos = offset
+    threeRef.current.targetCamLookAt = target
+
+    setPartsLoading(true)
+    fetch(`${API_BASE_URL}/parts?category=${hs.category}&limit=4`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setHotspotParts(d?.data || []))
+      .catch(() => setHotspotParts([]))
+      .finally(() => setPartsLoading(false))
   }
 
   return (
-    <div className="rounded-[32px] bg-[#0A0A0A] border border-white/5 overflow-hidden">
-      {/* Header */}
-      <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <div className="relative w-full rounded-[32px] overflow-hidden border border-white/10 bg-[#060608] shadow-[0_20px_60px_rgba(0,0,0,0.85)]">
+      
+      {/* ── Studio Header Bar ────────────────────────────────────────────── */}
+      <div className="absolute top-0 inset-x-0 z-20 p-5 sm:p-7 flex flex-wrap items-start justify-between gap-4 pointer-events-none bg-gradient-to-b from-black/90 via-black/40 to-transparent">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#C9A227] block mb-2">
-            Interactive 3D Studio
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-serif font-bold text-white">
-            Explore in <span className="italic font-light text-white/70">Three Dimensions</span>
-          </h3>
-          <p className="text-[11px] font-mono text-[#7A7A7A] uppercase tracking-widest mt-2 flex items-center gap-2">
-            <MousePointerClick className="w-3.5 h-3.5 text-[#C9A227]" />
-            Drag to orbit · scroll to zoom · click a labelled zone to shop real parts
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#C9A227] font-bold">
+              Interactive 3D Studio & Engineering Stage
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-[#A0A0A0]">
+              {cadSpecs.archetypeLabel}
+            </span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
+            Inspect {displayName}
+          </h2>
+          <p className="text-[11px] font-mono text-white/50 mt-0.5">
+            Drag to orbit · scroll to zoom · use TopView MCP for CAD blueprint telemetry
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Top Center-Right: Mode Control Panel (MCP) */}
+        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+          {/* MCP Preset Bar */}
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-black/80 backdrop-blur-2xl border border-white/15 shadow-2xl">
+            <button
+              onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'top')!)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 transition-all ${
+                activeCameraPreset === 'top'
+                  ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
+              title="Activate Overhead CAD Blueprint Mode Control Panel"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>TOP VIEW MCP</span>
+              {activeCameraPreset === 'top' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'hero')!)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 transition-all ${
+                activeCameraPreset === 'hero'
+                  ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+              title="Return to 3D Perspective Orbit"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>3D ORBIT</span>
+            </button>
+
+            <button
+              onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'front')!)}
+              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold transition-all ${
+                activeCameraPreset === 'front'
+                  ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              FRONT
+            </button>
+
+            <button
+              onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'side')!)}
+              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold transition-all ${
+                activeCameraPreset === 'side'
+                  ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              SIDE
+            </button>
+
+            <button
+              onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'rear')!)}
+              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold transition-all ${
+                activeCameraPreset === 'rear'
+                  ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              REAR
+            </button>
+          </div>
+
+          {/* Quick Turntable & Reset */}
           <button
-            onClick={() => setRunning((r) => !r)}
-            className={`h-12 px-6 rounded-full font-mono text-[10px] uppercase tracking-widest font-bold flex items-center gap-2 transition-colors ${
-              running ? 'bg-[#3DD598] text-black' : 'bg-[#C9A227] text-black hover:bg-white'
+            onClick={() => setAutoRotate(!autoRotate)}
+            className={`p-2.5 rounded-xl border transition-all ${
+              autoRotate
+                ? 'bg-[#C9A227] text-black border-[#C9A227]'
+                : 'bg-black/70 backdrop-blur-xl border-white/10 text-white hover:border-[#C9A227]'
             }`}
+            title="Toggle 360° Turntable Rotation"
           >
-            {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            {running ? 'Running' : 'Start Engine'}
+            <RotateCw className={`w-4 h-4 ${autoRotate ? 'animate-spin' : ''}`} />
           </button>
           <button
-            onClick={() => { setRunning(false); applyPaint(PAINTS[0]) }}
-            title="Reset studio"
-            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-[#7A7A7A] hover:text-white hover:border-white/30 transition-colors"
+            onClick={() => handleCameraPreset(CAMERA_PRESETS[0])}
+            className="p-2.5 rounded-xl bg-black/70 backdrop-blur-xl border border-white/10 text-white hover:border-[#C9A227] transition-all"
+            title="Reset Camera View"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="relative">
-        <div ref={mountRef} className="w-full h-[420px] sm:h-[520px] cursor-grab active:cursor-grabbing" />
+      {/* ── WebGL Canvas Container ──────────────────────────────────────── */}
+      <div
+        ref={mountRef}
+        className="w-full h-[600px] sm:h-[700px] cursor-grab active:cursor-grabbing"
+      />
 
-        {!ready && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0A0A0A]">
-            <Loader2 className="w-8 h-8 text-[#C9A227] animate-spin" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#7A7A7A] mt-4">
-              Preparing Studio…
-            </span>
-          </div>
-        )}
+      {/* ── TopView MCP Engineering Blueprint HUD Overlay ────────────── */}
+      {topViewBlueprint && (
+        <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-6 sm:p-8">
+          
+          {/* Top Blueprint Header Telemetry */}
+          <div className="mt-20 flex flex-wrap items-center justify-between gap-4 pointer-events-auto">
+            <div className="p-3.5 rounded-2xl bg-black/85 backdrop-blur-xl border border-[#C9A227]/40 shadow-2xl flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#C9A227] animate-ping" />
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#C9A227] block">
+                  Top-Down CAD Engineering MCP
+                </span>
+                <span className="text-xs font-mono text-white/80">
+                  Orthographic Blueprint • Scale 1:1 Telemetry
+                </span>
+              </div>
+            </div>
 
-        {/* Paint configurator */}
-        <div className="absolute left-6 bottom-6 z-10 rounded-2xl bg-black/70 backdrop-blur-xl border border-white/10 p-4">
-          <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-[#7A7A7A] block mb-3">
-            Paint — {paint.name}
-          </span>
-          <div className="flex items-center gap-2.5">
-            {PAINTS.map((p) => (
+            <div className="flex items-center gap-2">
               <button
-                key={p.name}
-                onClick={() => applyPaint(p)}
-                title={p.name}
-                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                  paint.name === p.name ? 'border-[#C9A227] scale-110' : 'border-white/20'
+                onClick={() => setShowDimensions(!showDimensions)}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
+                  showDimensions
+                    ? 'bg-[#C9A227]/20 border-[#C9A227] text-white'
+                    : 'bg-black/70 border-white/10 text-white/60 hover:text-white'
                 }`}
-                style={{ backgroundColor: p.hex }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Parts drawer */}
-      {activeZone && (
-        <div className="border-t border-white/5 bg-black/40 p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-lg font-serif font-bold text-white flex items-center gap-3">
-              <Wrench className="w-5 h-5 text-[#C9A227]" />
-              {activeZone.label} — Available Parts
-            </h4>
-            <div className="flex items-center gap-3">
-              <Link href="/parts" className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] hover:text-white transition-colors">
-                Full Catalogue →
-              </Link>
-              <button
-                onClick={() => setActiveZone(null)}
-                className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
-                aria-label="Close parts panel"
               >
-                <X className="w-4 h-4" />
+                <Ruler className="w-3.5 h-3.5 text-[#C9A227]" />
+                <span>{showDimensions ? 'Hide Dimensions' : 'Show Dimensions'}</span>
+              </button>
+              <button
+                onClick={handleToggleWireframe}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
+                  wireframeMode
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                    : 'bg-black/70 border-white/10 text-white/60 hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Wireframe CAD</span>
+              </button>
+              <button
+                onClick={() => handleCameraPreset(CAMERA_PRESETS[0])}
+                className="px-3 py-2 rounded-xl bg-white text-black font-bold text-[10px] font-mono uppercase tracking-wider hover:bg-[#C9A227] hover:text-white transition-all shadow-lg"
+              >
+                Exit to 3D Orbit
               </button>
             </div>
           </div>
 
-          {partsLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="w-6 h-6 text-[#C9A227] animate-spin" />
-            </div>
-          ) : parts.length === 0 ? (
-            <p className="text-xs font-mono text-[#7A7A7A] uppercase tracking-widest py-6 text-center">
-              No published parts in this category yet — check the full catalogue or ask the concierge.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {parts.map((part) => (
-                <Link
-                  key={part.id}
-                  href={`/parts/${part.slug}`}
-                  className="group p-5 rounded-2xl bg-[#0A0A0A] border border-white/5 hover:border-[#C9A227]/50 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <span className="text-[9px] font-mono text-[#7A7A7A] uppercase tracking-widest">{part.sku}</span>
-                    <span className={`text-[8px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                      part.condition === 'NEW'
-                        ? 'text-[#3DD598] border-[#3DD598]/30 bg-[#3DD598]/5'
-                        : 'text-[#C9A227] border-[#C9A227]/30 bg-[#C9A227]/5'
-                    }`}>
-                      {part.condition}
-                    </span>
-                  </div>
-                  <h5 className="text-sm font-serif font-bold text-white group-hover:text-[#C9A227] transition-colors leading-snug">
-                    {part.name}
-                  </h5>
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-[#C9A227] font-mono font-bold text-sm">
-                      {part.currency} {Number(part.price).toLocaleString()}
-                    </span>
-                    <span className="text-[9px] font-mono uppercase tracking-widest text-[#7A7A7A]">
-                      {part.stockQty > 0 ? `${part.stockQty} in stock` : 'Made to order'}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+          {/* Center Dimension Graphics Overlay */}
+          {showDimensions && (
+            <div className="relative w-full max-w-2xl mx-auto my-auto py-8">
+              {/* Length Dimension Indicator Bar */}
+              <div className="flex items-center justify-between text-[#C9A227] text-xs font-mono mb-2">
+                <span className="flex items-center gap-1.5 font-bold tracking-widest bg-black/80 px-2.5 py-1 rounded-lg border border-[#C9A227]/30">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  OVERALL LENGTH: {cadSpecs.lengthMm} mm
+                </span>
+                <span className="text-[10px] text-white/60 tracking-wider bg-black/60 px-2 py-0.5 rounded">
+                  WHEELBASE: {cadSpecs.wheelbaseMm} mm
+                </span>
+              </div>
+
+              {/* Center Crosshair / CoG */}
+              <div className="w-full flex items-center justify-center my-4">
+                <div className="relative flex items-center justify-center p-3 rounded-full bg-black/70 border border-dashed border-[#C9A227]/50 shadow-[0_0_30px_rgba(201,162,39,0.3)]">
+                  <Crosshair className="w-8 h-8 text-[#C9A227] animate-spin-slow" />
+                  <span className="absolute -bottom-5 text-[9px] font-mono tracking-widest text-[#C9A227] whitespace-nowrap">
+                    CENTER OF GRAVITY (CoG)
+                  </span>
+                </div>
+              </div>
+
+              {/* Width Dimension Indicator Bar */}
+              <div className="flex items-center justify-between text-[#C9A227] text-xs font-mono mt-2">
+                <span className="flex items-center gap-1.5 font-bold tracking-widest bg-black/80 px-2.5 py-1 rounded-lg border border-[#C9A227]/30">
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  OVERALL WIDTH: {cadSpecs.widthMm} mm
+                </span>
+                <span className="text-[10px] text-white/60 tracking-wider bg-black/60 px-2 py-0.5 rounded">
+                  TRACK: F {cadSpecs.frontTrackMm} mm • R {cadSpecs.rearTrackMm} mm
+                </span>
+              </div>
             </div>
           )}
+
+          {/* Bottom Blueprint Spec Grid Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-black/85 backdrop-blur-xl border border-white/15 pointer-events-auto">
+            <div>
+              <span className="text-[9px] font-mono uppercase text-white/50 block">Axle Weight Distribution</span>
+              <span className="text-xs font-mono text-[#C9A227] font-bold">{cadSpecs.weightDistribution}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-mono uppercase text-white/50 block">Aerodynamic Drag Factor</span>
+              <span className="text-xs font-mono text-white font-bold">{cadSpecs.dragCoefficient}</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-mono uppercase text-white/50 block">Ground Clearance</span>
+              <span className="text-xs font-mono text-[#C9A227] font-bold">{cadSpecs.groundClearanceMm} mm</span>
+            </div>
+            <div>
+              <span className="text-[9px] font-mono uppercase text-white/50 block">Digital Twin Architecture</span>
+              <span className="text-xs font-mono text-emerald-400 font-bold uppercase">{modelType === 'glb-real' ? 'Real GLB Mesh' : 'Bespoke CAD Twin'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Loading Overlay ─────────────────────────────────────────────── */}
+      {loading && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#060608] backdrop-blur-md">
+          <div className="relative w-16 h-16 mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+            <div className="absolute inset-0 rounded-full border-2 border-[#C9A227] border-t-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#C9A227] mb-2 font-bold">
+            {loadingText}
+          </span>
+          {loadingProgress > 0 && (
+            <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#C9A227] transition-all duration-200"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Left Floating Panel: Materials, Controls & Animations ─────── */}
+      <div className="absolute top-28 left-6 z-20 hidden lg:flex flex-col gap-4 max-w-[260px] pointer-events-auto">
+        
+        {/* Paint Customizer */}
+        <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] font-bold">
+              Exterior Lacquer
+            </span>
+            <span className="text-[10px] font-mono text-white/80">{currentPaint.name}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2.5">
+            {LUXURY_PAINTS.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => handleSelectPaint(p)}
+                className={`w-11 h-11 rounded-xl transition-all duration-300 relative border flex items-center justify-center ${
+                  currentPaint.name === p.name
+                    ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]'
+                    : 'border-white/15 hover:border-white/50 hover:scale-105'
+                }`}
+                style={{ backgroundColor: p.hex }}
+                title={p.name}
+              >
+                {currentPaint.name === p.name && (
+                  <span className="w-2 h-2 rounded-full bg-white shadow-md" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dynamic Part Animations */}
+        <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] font-bold block mb-2">
+            Mechanical Controls
+          </span>
+          <button
+            onClick={handleToggleDoors}
+            className={`w-full py-2 px-3 rounded-xl border text-[11px] font-mono uppercase tracking-wider flex items-center justify-between transition-all ${
+              doorsOpen
+                ? 'bg-[#C9A227]/20 border-[#C9A227] text-white'
+                : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+            }`}
+          >
+            <span>{doorsOpen ? 'Close Doors' : 'Open Doors'}</span>
+            <span className={`w-2 h-2 rounded-full ${doorsOpen ? 'bg-[#C9A227]' : 'bg-white/20'}`} />
+          </button>
+
+          <button
+            onClick={handleToggleHood}
+            className={`w-full py-2 px-3 rounded-xl border text-[11px] font-mono uppercase tracking-wider flex items-center justify-between transition-all ${
+              hoodOpen
+                ? 'bg-[#C9A227]/20 border-[#C9A227] text-white'
+                : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+            }`}
+          >
+            <span>{hoodOpen ? 'Close Bonnet' : 'Open Bonnet'}</span>
+            <span className={`w-2 h-2 rounded-full ${hoodOpen ? 'bg-[#C9A227]' : 'bg-white/20'}`} />
+          </button>
+
+          <button
+            onClick={handleToggleWireframe}
+            className={`w-full py-2 px-3 rounded-xl border text-[11px] font-mono uppercase tracking-wider flex items-center justify-between transition-all ${
+              wireframeMode
+                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+            }`}
+          >
+            <span>X-Ray Chassis</span>
+            <Layers className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Lighting & Engine Ignition */}
+        <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleToggleHeadlights}
+              className={`py-2 px-3 rounded-xl border text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                headlightsOn
+                  ? 'bg-white/15 border-white text-white'
+                  : 'bg-white/5 border-white/10 text-white/50'
+              }`}
+            >
+              <Lightbulb className="w-3.5 h-3.5" />
+              <span>Headlights</span>
+            </button>
+            <button
+              onClick={handleToggleUnderglow}
+              className={`py-2 px-3 rounded-xl border text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                underglowOn
+                  ? 'bg-[#C9A227]/20 border-[#C9A227] text-[#C9A227]'
+                  : 'bg-white/5 border-white/10 text-white/50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Underglow</span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => setEngineRunning(!engineRunning)}
+            className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-mono font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
+              engineRunning
+                ? 'bg-red-500 text-white border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse'
+                : 'bg-white text-black hover:bg-[#C9A227] hover:text-white border-transparent'
+            }`}
+          >
+            <Zap className="w-4 h-4" />
+            <span>{engineRunning ? 'Stop Engine' : 'Ignite Engine'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Right Floating Panel: Vehicle Telemetry Specs ────────────────── */}
+      <div className="absolute top-28 right-6 z-20 hidden xl:flex flex-col gap-3 max-w-[240px] pointer-events-auto">
+        <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl space-y-3">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] font-bold block border-b border-white/10 pb-2">
+            Engineering Telemetry
+          </span>
+          <div className="space-y-2 text-xs font-mono">
+            <div>
+              <span className="text-white/50 text-[10px] uppercase block">Power Output</span>
+              <span className="text-white font-bold text-sm tracking-wider">{specs.power}</span>
+            </div>
+            <div>
+              <span className="text-white/50 text-[10px] uppercase block">Acceleration</span>
+              <span className="text-[#C9A227] font-bold text-sm tracking-wider">{specs.acceleration}</span>
+            </div>
+            <div>
+              <span className="text-white/50 text-[10px] uppercase block">Top Speed</span>
+              <span className="text-white font-bold text-sm tracking-wider">{specs.topSpeed}</span>
+            </div>
+            <div>
+              <span className="text-white/50 text-[10px] uppercase block">Powertrain</span>
+              <span className="text-white/80 text-[11px] leading-tight block">{specs.engine}</span>
+            </div>
+            <div>
+              <span className="text-white/50 text-[10px] uppercase block">Transmission</span>
+              <span className="text-white/80 text-[11px] leading-tight block">{specs.transmission}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3D Spatial Parts Hotspot Trigger Pills */}
+        <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] font-bold block mb-2">
+            Inspect & Shop Parts
+          </span>
+          {DEFAULT_HOTSPOTS_3D.map((hs) => (
+            <button
+              key={hs.id}
+              onClick={() => handleSelectHotspot(hs)}
+              className={`w-full py-1.5 px-2.5 rounded-lg border text-left text-[10px] font-mono truncate transition-all flex items-center justify-between ${
+                activeHotspot?.id === hs.id
+                  ? 'bg-[#C9A227]/20 border-[#C9A227] text-white font-bold'
+                  : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:border-white/30'
+              }`}
+            >
+              <span className="truncate">{hs.label}</span>
+              <ChevronRight className="w-3 h-3 text-[#C9A227] shrink-0 ml-1" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Bar: Lighting Themes Switcher ────────────────────────── */}
+      <div className="absolute bottom-6 inset-x-6 z-20 flex flex-wrap items-center justify-between gap-4 pointer-events-none">
+        
+        {/* Lighting Themes */}
+        <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 pointer-events-auto shadow-2xl">
+          {LIGHTING_THEMES.map((theme) => {
+            const Icon = theme.icon
+            return (
+              <button
+                key={theme.id}
+                onClick={() => handleLightingTheme(theme.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all ${
+                  lightingTheme === theme.id
+                    ? 'bg-white text-black font-bold shadow-md'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                <span>{theme.label.split(' ')[0]}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Current Camera Angle Badge */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-xl border border-white/10 text-[10px] font-mono text-white/70 pointer-events-auto shadow-2xl">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227]" />
+          <span>STAGE CAMERA: <strong className="text-white uppercase">{activeCameraPreset}</strong></span>
+        </div>
+      </div>
+
+      {/* ── Hotspot Detail Drawer Modal ─────────────────────────────────── */}
+      {activeHotspot && (
+        <div className="absolute bottom-24 right-6 z-30 w-full max-w-sm p-5 rounded-2xl bg-black/90 backdrop-blur-2xl border border-[#C9A227]/40 shadow-[0_10px_40px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <span className="text-[9px] font-mono uppercase tracking-widest text-[#C9A227] font-bold block">
+                Inspected Component
+              </span>
+              <h4 className="text-base font-serif font-bold text-white mt-0.5">
+                {activeHotspot.label}
+              </h4>
+            </div>
+            <button
+              onClick={() => setActiveHotspot(null)}
+              className="p-1 text-white/50 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-white/70 leading-relaxed mb-3">
+            {activeHotspot.description}
+          </p>
+
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 mb-4 flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase text-white/50">Factory Benchmark</span>
+            <span className="text-xs font-mono font-bold text-[#C9A227]">{activeHotspot.stat}</span>
+          </div>
+
+          {/* Related Parts */}
+          <div className="space-y-2">
+            <span className="text-[9px] font-mono uppercase tracking-widest text-white/40 block">
+              Available Inventory Upgrades
+            </span>
+            {partsLoading ? (
+              <div className="flex items-center justify-center py-4 text-white/50 text-xs font-mono">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading inventory...
+              </div>
+            ) : hotspotParts.length > 0 ? (
+              hotspotParts.map((part) => (
+                <div
+                  key={part.id}
+                  className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-xs text-white truncate font-medium">{part.name}</p>
+                    <p className="text-[10px] text-white/50 font-mono">${part.price.toLocaleString()}</p>
+                  </div>
+                  <Link
+                    href={`/parts/${part.id}`}
+                    className="px-2.5 py-1 rounded-md bg-[#C9A227] text-black text-[10px] font-mono font-bold uppercase hover:bg-white transition-colors shrink-0"
+                  >
+                    View
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <p className="text-[11px] text-white/40 font-mono italic py-1">
+                OEM parts available on request via VIP concierge.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

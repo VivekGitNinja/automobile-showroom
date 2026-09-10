@@ -34,8 +34,23 @@ const faqCategorySchema = z.object({
 
 const faqCategoryUpdateSchema = faqCategorySchema.partial()
 
+export const faqCategoryRouter = Router()
+
+// GET /api/v1/faq-categories
+faqCategoryRouter.get('/', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const categories = await prisma.faqCategory.findMany({
+      where: { isActive: true },
+      orderBy: { displayOrder: 'asc' },
+    })
+    res.json({ data: categories })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // POST /api/v1/faq-categories
-router.post('/faq-categories', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+faqCategoryRouter.post('/', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const data = faqCategorySchema.parse(req.body)
     const category = await prisma.faqCategory.create({ data })
@@ -46,7 +61,7 @@ router.post('/faq-categories', authMiddleware, rbac('editor'), async (req: Reque
 })
 
 // PUT /api/v1/faq-categories/:id
-router.put('/faq-categories/:id', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+faqCategoryRouter.put('/:id', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params
     const data = faqCategoryUpdateSchema.parse(req.body)
@@ -62,6 +77,46 @@ router.put('/faq-categories/:id', authMiddleware, rbac('editor'), async (req: Re
 })
 
 // DELETE /api/v1/faq-categories/:id
+faqCategoryRouter.delete('/:id', authMiddleware, rbac('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params
+    await prisma.faqCategory.delete({ where: { id } })
+    res.json({ success: true, message: 'Category deleted' })
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Category not found' })
+      return
+    }
+    next(err)
+  }
+})
+
+// Aliases on main router for /faqs/faq-categories
+router.post('/faq-categories', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = faqCategorySchema.parse(req.body)
+    const category = await prisma.faqCategory.create({ data })
+    res.status(201).json({ data: category })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.put('/faq-categories/:id', authMiddleware, rbac('editor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params
+    const data = faqCategoryUpdateSchema.parse(req.body)
+    const category = await prisma.faqCategory.update({ where: { id }, data })
+    res.json({ data: category })
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Category not found' })
+      return
+    }
+    next(err)
+  }
+})
+
 router.delete('/faq-categories/:id', authMiddleware, rbac('admin'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params

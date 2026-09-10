@@ -95,7 +95,8 @@ export default function SellYourCarPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || errData.error || "We couldn't submit your vehicle valuation request — please retry or contact our acquisition desk via WhatsApp.")
+        const errorMsg = (typeof errData.error === 'object' ? errData.error?.message : errData.error) || errData.message || "We couldn't submit your vehicle valuation request — please retry or contact our acquisition desk via WhatsApp."
+        throw new Error(errorMsg)
       }
 
       setSubmitted(true)

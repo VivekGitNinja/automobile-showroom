@@ -206,7 +206,7 @@ async function main() {
     if (brand) {
       await prisma.vehicle.upsert({
         where: { slug: `${v.make}-${v.model}-${v.year}`.toLowerCase().replace(/[^a-z0-9]+/g, '-') },
-        update: {},
+        update: { status: v.status as any },
         create: {
           brandId: brand.id,
           make: v.make,

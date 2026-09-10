@@ -102,7 +102,7 @@ export default function VehicleClient({ vehicle, relatedVehicles }: VehicleClien
 
         {/* Interactive 3D Studio — orbit, repaint, start, shop real parts */}
         <section className="mt-16 sm:mt-24">
-          <Vehicle3DStudio vehicleName={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} />
+          <Vehicle3DStudio vehicleName={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} vehicle={vehicle} />
         </section>
 
         {/* Cinematic Vehicle Film */}
@@ -134,16 +134,21 @@ export default function VehicleClient({ vehicle, relatedVehicles }: VehicleClien
         {/* 360 Exterior Studio & Part Inspector */}
         {vehicle.frames360 && vehicle.frames360.length > 0 && (
           <section className="mt-16 sm:mt-24">
-            <Exterior360Viewer frames={vehicle.frames360} hotspots={vehicle.hotspots} />
+            <Exterior360Viewer frames={vehicle.frames360} hotspots={vehicle.hotspots} vehicle={vehicle} />
           </section>
         )}
 
         {/* 360 Interior Cockpit Tour */}
-        {galleryImages.some(img => img.mediaCategory === 'interior' || img.mediaCategory === 'dashboard') && (
-          <section className="mt-16 sm:mt-24">
-            <Interior360Panorama images={galleryImages.filter(img => img.mediaCategory === 'interior' || img.mediaCategory === 'dashboard')} />
-          </section>
-        )}
+        <section className="mt-16 sm:mt-24">
+          <Interior360Panorama
+            images={
+              galleryImages.filter(img => img.mediaCategory === 'interior' || img.mediaCategory === 'dashboard').length > 0
+                ? galleryImages.filter(img => img.mediaCategory === 'interior' || img.mediaCategory === 'dashboard')
+                : galleryImages
+            }
+            vehicle={vehicle}
+          />
+        </section>
 
         {/* Specifications Grid */}
         <section className="mt-16 sm:mt-24">

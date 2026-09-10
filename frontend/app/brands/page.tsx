@@ -4,7 +4,7 @@ import { Metadata } from 'next'
 import { SITE_URL } from '../../lib/site'
 import { API_BASE_URL } from '../../lib/api'
 
-export const revalidate = 300
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Luxury Car Brands — Apex Luxury Automobiles',
@@ -13,6 +13,15 @@ export const metadata: Metadata = {
   },
 }
 
+const DEFAULT_BRANDS = [
+  { name: 'Aston Martin', slug: 'aston-martin', count: 1 },
+  { name: 'Ferrari', slug: 'ferrari', count: 1 },
+  { name: 'Lamborghini', slug: 'lamborghini', count: 2 },
+  { name: 'Mercedes-Benz', slug: 'mercedes-benz', count: 1 },
+  { name: 'Porsche', slug: 'porsche', count: 1 },
+  { name: 'Rolls-Royce', slug: 'rolls-royce', count: 1 },
+]
+
 // Curated brand copy — counts always come from the live inventory
 const BRAND_COPY: Record<string, string> = {
   'Rolls-Royce': 'The pinnacle of bespoke luxury and effortless power.',
@@ -20,6 +29,7 @@ const BRAND_COPY: Record<string, string> = {
   'Ferrari': 'Pure Italian racing heritage and electrifying performance.',
   'Lamborghini': 'Extroverted design, atmospheric V12 sound, and raw emotion.',
   'Porsche': 'Precision engineering, track-focused GT models, and iconic silhouettes.',
+  'Mercedes-Benz': 'First-class luxury, supreme silence, and grand presence.',
   'Mercedes-Maybach': 'First-class luxury, supreme silence, and grand presence.',
   'Bentley': 'Handcrafted British grand tourers with immense presence.',
   'McLaren': 'Race-bred aerodynamics and relentless performance.',
@@ -31,12 +41,12 @@ const BRAND_COPY: Record<string, string> = {
 
 async function getBrands(): Promise<{ name: string; slug: string; count: number }[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/vehicles/brands`, { next: { revalidate: 300 } })
-    if (!res.ok) return []
+    const res = await fetch(`${API_BASE_URL}/vehicles/brands`, { cache: 'no-store' })
+    if (!res.ok) return DEFAULT_BRANDS
     const data = await res.json()
-    return data.data || []
+    return (data.data && data.data.length > 0) ? data.data : DEFAULT_BRANDS
   } catch {
-    return []
+    return DEFAULT_BRANDS
   }
 }
 
@@ -68,20 +78,29 @@ export default async function BrandsPage() {
             <Link
               key={b.slug}
               href={`/inventory?brand=${b.slug}`}
-              className="p-8 rounded-2xl bg-dark-card border border-gold/20 hover:border-gold hover:-translate-y-1 transition-all group"
+              className="p-8 rounded-2xl bg-dark-card border border-gold/20 hover:border-gold hover:-translate-y-1 transition-all group flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-serif font-bold text-white group-hover:text-gold transition-colors">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="h-10 w-28 relative flex items-center">
+                    <img
+                      src={`/uploads/brands/${b.slug}.svg`}
+                      alt={`${b.name} logo`}
+                      className="max-h-10 w-auto object-contain"
+                    />
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-mono">
+                    {b.count} {b.count === 1 ? 'Vehicle' : 'Vehicles'}
+                  </span>
+                </div>
+                <h3 className="text-2xl font-serif font-bold text-white group-hover:text-gold transition-colors mb-3">
                   {b.name}
                 </h3>
-                <span className="px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-mono">
-                  {b.count} {b.count === 1 ? 'Vehicle' : 'Vehicles'}
-                </span>
+                <p className="text-xs text-gray-400 font-light leading-relaxed mb-6">
+                  {BRAND_COPY[b.name] || `Discover our curated ${b.name} collection in Dubai.`}
+                </p>
               </div>
-              <p className="text-xs text-gray-400 font-light leading-relaxed mb-6">
-                {BRAND_COPY[b.name] || `Discover our curated ${b.name} collection in Dubai.`}
-              </p>
-              <span className="text-xs font-mono uppercase tracking-widest text-gold group-hover:underline">
+              <span className="text-xs font-mono uppercase tracking-widest text-gold group-hover:underline inline-flex items-center gap-1">
                 View Portfolio →
               </span>
             </Link>

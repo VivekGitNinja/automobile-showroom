@@ -15,7 +15,7 @@ import { z } from 'zod'
 const bookingSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(6, "Valid phone number is required"),
+  phone: z.string().min(7, "Valid phone number is required (min 7 digits)"),
   message: z.string().optional(),
 })
 

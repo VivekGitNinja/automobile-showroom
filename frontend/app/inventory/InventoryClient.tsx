@@ -138,7 +138,7 @@ function InventoryContent({ initial }: { initial?: InitialInventory }) {
     return () => {
       isMounted = false
     }
-  }, [selectedMake, selectedBrand, debouncedMaxPrice, selectedFuel, selectedTransmission, selectedMinYear, debouncedSearch, selectedSort, page])
+  }, [initial, selectedMake, selectedBrand, debouncedMaxPrice, selectedFuel, selectedTransmission, selectedMinYear, debouncedSearch, selectedSort, page])
 
   const handleResetFilters = () => {
     setSelectedMake('All')

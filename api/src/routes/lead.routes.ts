@@ -14,7 +14,7 @@ const router = Router()
 const leadSchema = z.object({
   fullName: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().min(7),
+  phone: z.string().min(3),
   vehicleId: z.string().uuid().optional(),
   leadType: z.enum(['enquiry', 'booking', 'callback', 'sell_car']).default('enquiry'),
   message: z.string().optional(),
@@ -28,6 +28,14 @@ router.post('/', leadLimiter, async (req: Request, res: Response, next: NextFunc
     if (req.body.company_website && String(req.body.company_website).trim().length > 0) {
       res.status(201).json({ message: 'Lead submitted successfully', data: { id: crypto.randomUUID() } })
       return
+    }
+
+    // Support lightweight newsletter subscription payloads
+    if (req.body.type === 'newsletter' || req.body.leadType === 'newsletter') {
+      if (!req.body.fullName) req.body.fullName = 'Newsletter Subscriber'
+      if (!req.body.phone) req.body.phone = '+971 4 000 0000'
+      req.body.leadType = 'enquiry'
+      if (!req.body.message) req.body.message = 'Newsletter Subscription'
     }
 
     const data = leadSchema.parse(req.body)
@@ -131,7 +139,7 @@ router.post('/sell-car', leadLimiter, async (req: Request, res: Response, next: 
       carMileage: z.string().optional(),
       description: z.string().optional(),
       askingPrice: z.string().optional(),
-      imageUrls: z.array(z.string().url().max(2048)).max(12).optional().default([]),
+      imageUrls: z.array(z.string().max(2048).refine((v) => /^https?:\/\//.test(v) || v.startsWith('/'), 'Must be a valid URL or path')).max(12).optional().default([]),
       company_website: z.string().optional().default(''),
     })
 

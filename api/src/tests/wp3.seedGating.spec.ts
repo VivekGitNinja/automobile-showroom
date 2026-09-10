@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 describe('WP3 — Gate Demo Seed Data Out of Production', () => {
   const originalEnv = process.env
 
@@ -35,8 +38,6 @@ describe('WP3 — Gate Demo Seed Data Out of Production', () => {
   })
 
   it('Demo vehicles in seed.ts are created as status: draft so they never leak publicly', () => {
-    const fs = require('fs')
-    const path = require('path')
     const seedContent = fs.readFileSync(path.join(__dirname, '../../prisma/seed.ts'), 'utf-8')
 
     // Verify allowDemo gate exists in seed.ts

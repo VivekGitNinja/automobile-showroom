@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit, Trash, MessageSquare, Loader2, X } from 'lucide-react'
 import { FaqCategory, FaqItem } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
@@ -22,14 +22,12 @@ export default function FAQAdminPage() {
   const [categoryForm, setCategoryForm] = useState({ label: '', slug: '', displayOrder: 0 })
   const [faqForm, setFaqForm] = useState({ question: '', answer: '', displayOrder: 0 })
 
-  const getToken = () => localStorage.getItem('adminToken') || ''
-
   const showFeedback = (message: string, type: 'success' | 'error') => {
     setFeedback({ message, type })
     setTimeout(() => setFeedback(null), 3000)
   }
 
-  const fetchFaqs = async () => {
+  const fetchFaqs = useCallback(async () => {
     setLoading(true)
     try {
       const res = await adminFetch(`${API_BASE_URL}/faqs`)
@@ -43,11 +41,11 @@ export default function FAQAdminPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchFaqs()
-  }, [])
+  }, [fetchFaqs])
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +55,7 @@ export default function FAQAdminPage() {
         : `${API_BASE_URL}/faq-categories`
       const method = editingCategory ? 'PUT' : 'POST'
       
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'},
@@ -104,7 +102,7 @@ export default function FAQAdminPage() {
         categoryId: editingFaq ? editingFaq.categoryId : targetCategoryId
       }
       
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'},

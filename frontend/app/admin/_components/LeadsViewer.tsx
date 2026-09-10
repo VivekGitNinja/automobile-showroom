@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Loader2, Users, Search, Filter, Phone, Mail, Clock, CheckCircle, XCircle, ArrowRight, Download } from 'lucide-react'
 import { API_BASE_URL } from '../../../lib/api'
 import { adminFetch } from '../../../lib/adminFetch'
@@ -10,21 +10,14 @@ export default function LeadsViewer() {
   const [leads, setLeads] = useState<any[]>([])
   const [filterType, setFilterType] = useState('all')
 
-  useEffect(() => {
-    fetchLeads()
-  }, [filterType])
-
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     setLoading(true)
-    const token = localStorage.getItem('adminToken')
     try {
       const url = filterType === 'all' 
         ? `${API_BASE_URL}/admin/leads` 
         : `${API_BASE_URL}/admin/leads?leadType=${filterType}`
         
-      const res = await fetch(url, {
-        headers: {}
-      })
+      const res = await adminFetch(url)
       const data = await res.json()
       if (res.ok) {
         setLeads(data.data || [])
@@ -34,7 +27,11 @@ export default function LeadsViewer() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterType])
+
+  useEffect(() => {
+    fetchLeads()
+  }, [fetchLeads])
 
   const updateLeadStatus = async (id: string, newStatus: string) => {
     const token = localStorage.getItem('adminToken')

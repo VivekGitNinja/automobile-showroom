@@ -30,9 +30,6 @@ export default function PdfBrochureButton({ vehicle }: PdfBrochureButtonProps) {
   }
 
   const handlePrintPdf = () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
-
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -61,7 +58,7 @@ export default function PdfBrochureButton({ vehicle }: PdfBrochureButtonProps) {
       background: #060606;
       border: 12px solid #0D0D0D;
       display: flex;
-      flex-col;
+      flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
     }
@@ -100,162 +97,194 @@ export default function PdfBrochureButton({ vehicle }: PdfBrochureButtonProps) {
       margin-top: 4px;
     }
 
-    .cert-badge {
-      border: 1px solid #C9A227;
-      padding: 6px 16px;
-      border-radius: 100px;
+    .badge-certified {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: #C9A227;
+      font-size: 10px;
       letter-spacing: 2px;
       text-transform: uppercase;
-      background: rgba(201, 162, 39, 0.05);
+      color: #C9A227;
+      border: 1px solid #C9A227;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(201, 162, 39, 0.08);
     }
 
     .hero-container {
       position: relative;
-      height: 105mm;
-      margin-top: 8mm;
-      border-radius: 16px;
+      height: 98mm;
+      border-radius: 8px;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 6mm 0;
     }
 
-    .hero-img {
+    .hero-container img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .hero-overlay {
+    .hero-gradient {
       position: absolute;
       inset: 0;
-      background: linear-gradient(to top, #060606 0%, transparent 70%);
+      background: linear-gradient(to top, #060606 0%, transparent 60%);
     }
 
-    .cover-title-area {
-      z-index: 10;
+    .title-price-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
+      z-index: 10;
     }
 
-    .title-main {
+    .car-title-block h1 {
       font-family: 'Cinzel', serif;
-      font-size: 36px;
+      font-size: 30px;
       font-weight: 700;
-      color: #FFF;
+      letter-spacing: 2px;
+      color: #FFFFFF;
       line-height: 1.1;
     }
 
-    .price-main {
+    .car-title-block .meta {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 30px;
-      font-weight: 700;
-      color: #C9A227;
-    }
-
-    /* Page 2: Specs & Metrics */
-    .section-title {
-      font-family: 'Cinzel', serif;
-      font-size: 22px;
-      font-weight: 700;
-      color: #C9A227;
+      font-size: 11px;
+      color: #A0A0A0;
       letter-spacing: 2px;
-      margin-bottom: 6mm;
+      margin-top: 6px;
+      text-transform: uppercase;
     }
 
-    .metrics-grid {
+    .price-block {
+      text-align: right;
+    }
+
+    .price-block .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: #888888;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .price-block .amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px;
+      font-weight: 600;
+      color: #C9A227;
+    }
+
+    .footer-bar {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 4mm;
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: #666666;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 10;
+    }
+
+    /* Page 2: Technical Dossier */
+    .page-2-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+      padding-bottom: 4mm;
+    }
+
+    .page-2-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      letter-spacing: 3px;
+      color: #C9A227;
+      text-transform: uppercase;
+    }
+
+    .key-metrics-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 12px;
-      margin-bottom: 8mm;
+      margin: 6mm 0;
     }
 
     .metric-card {
-      background: #0E0E0E;
+      background: #0C0C0C;
       border: 1px solid rgba(201, 162, 39, 0.3);
-      padding: 16px;
-      border-radius: 12px;
+      border-radius: 8px;
+      padding: 12px;
       text-align: center;
     }
 
     .metric-val {
       font-family: 'Cinzel', serif;
-      font-size: 26px;
+      font-size: 20px;
       font-weight: 700;
       color: #FFF;
     }
 
     .metric-lbl {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
+      font-size: 8px;
       color: #C9A227;
-      text-transform: uppercase;
       letter-spacing: 2px;
+      text-transform: uppercase;
       margin-top: 4px;
     }
 
     .specs-table {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .spec-row {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
       background: #0A0A0A;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 12px 18px;
-      border-radius: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 6mm;
     }
 
-    .spec-lbl {
+    .spec-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+    }
+
+    .spec-k {
       font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
       color: #888;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
-    .spec-val {
-      font-size: 12px;
+    .spec-v {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
       font-weight: 600;
-      color: #FFF;
+      color: #EEE;
     }
 
-    .two-col-images {
+    .photo-mosaic {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      height: 75mm;
-      margin-top: 6mm;
+      gap: 12px;
+      height: 48mm;
     }
 
     .detail-img-box {
-      border-radius: 12px;
+      border-radius: 6px;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      position: relative;
     }
 
     .detail-img-box img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
-
-    .footer-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid rgba(201, 162, 39, 0.2);
-      padding-top: 4mm;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: #666;
     }
   </style>
 </head>
@@ -264,103 +293,155 @@ export default function PdfBrochureButton({ vehicle }: PdfBrochureButtonProps) {
   <!-- PAGE 1: COVER -->
   <div class="page">
     <div class="gold-border-frame"></div>
+    
     <div class="header-logo">
       <div>
         <div class="brand-mark">APEX AUTOMOBILI</div>
-        <div class="sub-mark">Dubai · Sheikh Zayed Road Flagship Atelier</div>
+        <div class="sub-mark">Sheikh Zayed Road Atelier · Dubai, UAE</div>
       </div>
-      <div class="cert-badge">Official Certificate of Provenance</div>
+      <div class="badge-certified">Certified Provenance</div>
     </div>
 
     <div class="hero-container">
-      <img src="${heroImage}" class="hero-img" alt="${vehicle.make} ${vehicle.model}">
-      <div class="hero-overlay"></div>
+      <img src="${heroImage}" alt="${vehicle.make} ${vehicle.model}">
+      <div class="hero-gradient"></div>
     </div>
 
-    <div class="cover-title-area">
-      <div>
-        <div class="sub-mark" style="color: #C9A227; margin-bottom: 6px;">Bespoke Specification Document</div>
-        <div class="title-main">${vehicle.year} ${vehicle.make}<br>${vehicle.model}</div>
-        <div class="sub-mark" style="margin-top: 8px;">VIN: ${vehicle.vin || 'Not specified'} · GCC CERTIFIED</div>
+    <div class="title-price-row">
+      <div class="car-title-block">
+        <div class="meta">${vehicle.year} · GCC SPECIFICATION · CHASSIS ARCHIVE</div>
+        <h1>${vehicle.year} ${vehicle.make} ${vehicle.model}</h1>
       </div>
-      <div style="text-align: right;">
-        <div class="sub-mark" style="margin-bottom: 4px;">Asking Showroom Price</div>
-        <div class="price-main">${formattedPrice}</div>
+      <div class="price-block">
+        <div class="label">Showroom Price</div>
+        <div class="amount">${formattedPrice}</div>
       </div>
     </div>
 
     <div class="footer-bar">
-      <div>Apex Concierge Desk: +971 50 891 9441 · concierge@apexluxuryautomobiles.com</div>
-      <div>Document Ref: APEX-SPEC-${Date.now().toString().slice(-6)}</div>
+      <div>VIN: ${vehicle.vin || 'CONFIDENTIAL / VERIFIED'}</div>
+      <div>Confidential Client Specification Dossier · Page 1 of 2</div>
     </div>
   </div>
 
-  <!-- PAGE 2: ENGINEERING & SPECIFICATIONS -->
+  <!-- PAGE 2: SPECS -->
   <div class="page">
     <div class="gold-border-frame"></div>
-    <div class="header-logo">
-      <div class="brand-mark" style="font-size: 18px;">APEX AUTOMOBILI</div>
-      <div class="sub-mark">Technical Specification Matrix</div>
+
+    <div class="page-2-header">
+      <h2>Engineering & Performance Dossier</h2>
+      <div class="sub-mark">${vehicle.make} ${vehicle.model}</div>
     </div>
 
-    <div style="margin-top: 4mm;">
-      <div class="section-title">Engineering & Performance Metric</div>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-val">1,600 HP</div>
-          <div class="metric-lbl">Powertrain</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val">440 KM/H</div>
-          <div class="metric-lbl">Top Speed</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val">2.4 SEC</div>
-          <div class="metric-lbl">0-100 KM/H</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val">1,600 NM</div>
-          <div class="metric-lbl">Peak Torque</div>
-        </div>
+    <div class="key-metrics-grid">
+      <div class="metric-card">
+        <div class="metric-val">1,600 HP</div>
+        <div class="metric-lbl">Power Output</div>
       </div>
-
-      <div class="section-title" style="margin-top: 4mm;">Vehicle Configuration</div>
-      <div class="specs-table">
-        <div class="spec-row"><span class="spec-lbl">Engine Architecture</span><span class="spec-val">${vehicle.engine || '8.0L W16 Quad-Turbo'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Transmission</span><span class="spec-val">${vehicle.transmission || '7-Speed Dual-Clutch'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Current Odometer</span><span class="spec-val">${vehicle.mileage ? vehicle.mileage.toLocaleString() + ' km' : '0 km'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Fuel Type</span><span class="spec-val">${vehicle.fuelType || 'High-Octane Super 98'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Exterior Paint</span><span class="spec-val">${vehicle.exteriorColor || 'Liquid Silver / Clear Carbon'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Interior Upholstery</span><span class="spec-val">${vehicle.interiorColor || 'Beluga Black Alcantara & Gold'}</span></div>
-        <div class="spec-row"><span class="spec-lbl">Chassis Type</span><span class="spec-val">Carbon Monocoque (50,000 Nm/deg)</span></div>
-        <div class="spec-row"><span class="spec-lbl">Brake System</span><span class="spec-val">420mm Carbon-Ceramic Discs</span></div>
+      <div class="metric-card">
+        <div class="metric-val">440 KM/H</div>
+        <div class="metric-lbl">Maximum Velocity</div>
       </div>
+      <div class="metric-card">
+        <div class="metric-val">2.4 SEC</div>
+        <div class="metric-lbl">0 - 100 KM/H</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">1,600 NM</div>
+        <div class="metric-lbl">Peak Torque</div>
+      </div>
+    </div>
 
-      <div class="two-col-images">
+    <div class="specs-table">
+      <div class="spec-item">
+        <span class="spec-k">Engine Architecture</span>
+        <span class="spec-v">${vehicle.engine || '8.0L Quad-Turbocharged W16'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Transmission</span>
+        <span class="spec-v">${vehicle.transmission || '7-Speed Dual-Clutch'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Drivetrain</span>
+        <span class="spec-v">${vehicle.drivetrain || 'All-Wheel Drive (AWD)'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Exterior Livery</span>
+        <span class="spec-v">${vehicle.exteriorColor || 'Nocturne Black / Clear Carbon'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Interior Trim</span>
+        <span class="spec-v">${vehicle.interiorColor || 'Gaucho Leather / Polished Titanium'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Odometer</span>
+        <span class="spec-v">${vehicle.mileage ? vehicle.mileage.toLocaleString() + ' km' : 'Delivery Mileage (0 km)'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">Warranty</span>
+        <span class="spec-v">${vehicle.hasWarranty ? '2-Year Apex Atelier Warranty' : 'Factory Direct Support'}</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-k">GCC Verification</span>
+        <span class="spec-v">${vehicle.gccVerified ? 'Certified GCC Compliance' : 'Global Export Ready'}</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sub-mark" style="margin-bottom: 6px; color: #C9A227;">Atelier Inspection Angles</div>
+      <div class="photo-mosaic">
         <div class="detail-img-box"><img src="${engineImage}" alt="Engine"></div>
         <div class="detail-img-box"><img src="${interiorImage}" alt="Interior"></div>
       </div>
     </div>
 
-    <div class="footer-bar">
-      <div>Verified by Apex Atelier Inspection Protocol · 150-Point Factory Guarantee</div>
-      <div>Page 2 of 2</div>
-    </div>
-  </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 600);
-    };
-  </script>
-</body>
-</html>
+    <script>
+      window.onload = function() {
+        setTimeout(function() {
+          window.print();
+        }, 600);
+      };
+    </script>
+  </body>
+  </html>
     `
 
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
+      return
+    }
+
+    // Fallback if browser popup blocker stops window.open
+    try {
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.right = '0'
+      iframe.style.bottom = '0'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      iframe.style.border = '0'
+      iframe.style.zIndex = '-9999'
+      document.body.appendChild(iframe)
+      const doc = iframe.contentWindow?.document
+      if (doc) {
+        doc.open()
+        doc.write(htmlContent)
+        doc.close()
+        setTimeout(() => {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe)
+            }
+          }, 2000)
+        }, 600)
+      }
+    } catch {
+      window.print()
+    }
   }
 
   return (

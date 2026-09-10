@@ -62,6 +62,7 @@ export interface Vehicle {
   frames360?: Vehicle360Frame[]
   sounds?: VehicleSound[]
   videoUrl?: string | null
+  model3dUrl?: string | null
   hotspots?: VehicleHotspot[]
   specConfigs?: VehicleSpecConfig[]
   brandId?: string

@@ -1,6 +1,9 @@
 import { Vehicle, VehicleImage, Journal, Part, PartCategory } from './types'
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
+export const API_BASE_URL =
+  typeof window === 'undefined' && process.env.API_URL
+    ? `${process.env.API_URL}/api/v1`
+    : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1')
 
 // ---------------------------------------------------------------------------
 // Fallback gallery image — used when a listing has no photos yet.

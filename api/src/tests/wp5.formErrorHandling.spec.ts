@@ -34,7 +34,7 @@ describe('WP5 — Eliminate Silent Form Error Swallowing', () => {
 
   describe('API error responses contract', () => {
     it('returns HTTP 409 with error explanation when a duplicate lead is submitted', async () => {
-      ;(prisma.lead.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue({
         id: 'existing-lead-1',
         email: 'vip@client.com',
       })

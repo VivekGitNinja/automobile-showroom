@@ -33,7 +33,7 @@ describe('WP4 — Honeypot Spam Protection', () => {
 
   describe('POST /api/v1/leads', () => {
     it('legitimate submission without honeypot creates lead and queues notification', async () => {
-      ;(prisma.lead.findFirst as jest.Mock).mockResolvedValue(null)
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.lead.create as jest.Mock).mockResolvedValue({
         id: 'lead-real-1',
         fullName: 'Lord Alexander Wright',
@@ -89,7 +89,7 @@ describe('WP4 — Honeypot Spam Protection', () => {
 
   describe('POST /api/v1/leads/sell-car', () => {
     it('legitimate submission without honeypot creates submission and queues notification', async () => {
-      ;(prisma.sellCarSubmission.create as jest.Mock).mockResolvedValue({
+      (prisma.sellCarSubmission.create as jest.Mock).mockResolvedValue({
         id: 'sell-real-1',
         fullName: 'Mansour Al-Nahyan',
         email: 'mansour@alnahyan.ae',

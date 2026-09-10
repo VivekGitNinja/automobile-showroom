@@ -11,7 +11,7 @@
  * the login screen.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
+import { API_BASE_URL } from './api'
 
 export function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null
@@ -65,21 +65,40 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function adminFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const doFetch = () =>
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+
+  const headers: Record<string, string> = {
+    ...authHeaders(),
+    ...((init.headers as Record<string, string>) || {}),
+  }
+
+  // Only default to application/json if not FormData and not already specified
+  const hasContentType = Object.keys(headers).some(k => k.toLowerCase() === 'content-type')
+  if (!isFormData && init.body && !hasContentType) {
+    headers['Content-Type'] = 'application/json'
+  }
+  // If FormData, explicitly delete Content-Type so browser sets boundary multipart header
+  if (isFormData) {
+    Object.keys(headers).forEach(k => {
+      if (k.toLowerCase() === 'content-type') {
+        delete headers[k]
+      }
+    })
+  }
+
+  const doFetch = (activeHeaders: Record<string, string>) =>
     fetch(url, {
       ...init,
-      headers: {
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...authHeaders((init.headers as Record<string, string>) || {}),
-      },
+      headers: activeHeaders,
     })
 
-  let res = await doFetch()
+  let res = await doFetch(headers)
 
   if (res.status === 401) {
     const newToken = await refreshAccessToken()
     if (newToken) {
-      res = await doFetch() // retried with the refreshed token
+      headers['Authorization'] = `Bearer ${newToken}`
+      res = await doFetch(headers) // retried with the refreshed token
     } else {
       clearAdminSession()
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin/login')) {

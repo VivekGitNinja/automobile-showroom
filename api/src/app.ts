@@ -12,7 +12,7 @@ import { setupSwagger } from './config/swagger'
 // Routes
 import vehicleRoutes   from './routes/vehicle.routes'
 import leadRoutes      from './routes/lead.routes'
-import faqRoutes       from './routes/faq.routes'
+import faqRoutes, { faqCategoryRouter } from './routes/faq.routes'
 import authRoutes      from './routes/auth.routes'
 import mediaRoutes     from './routes/media.routes'
 import syncRoutes      from './routes/sync.routes'
@@ -33,9 +33,31 @@ export function createApp() {
   app.use(helmet({
     contentSecurityPolicy: false,  // Managed by Nginx/Cloudflare
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }))
+  const allowedOrigins = [
+    env.REVALIDATE_URL.replace('/api/revalidate', ''),
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost',
+    'http://127.0.0.1',
+    'https://showroom.ae',
+    'https://www.showroom.ae',
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.FRONTEND_URL,
+  ].filter(Boolean) as string[]
+
   app.use(cors({
-    origin: [env.REVALIDATE_URL.replace('/api/revalidate',''), 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      if (
+        allowedOrigins.some(ao => origin === ao || origin.startsWith(ao)) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true)
+      }
+      return callback(null, true)
+    },
     credentials: true,
   }))
 
@@ -61,8 +83,9 @@ export function createApp() {
   app.use('/api/v1/vehicles',  vehicleRoutes)
   app.use('/api/v1/journals',  journalRoutes)
   app.use('/api/v1/leads',     leadRoutes)
-  app.use('/api/v1/faqs',      faqRoutes)
-  app.use('/api/v1/auth',      authRoutes)
+  app.use('/api/v1/faqs',           faqRoutes)
+  app.use('/api/v1/faq-categories', faqCategoryRouter)
+  app.use('/api/v1/auth',           authRoutes)
   app.use('/api/v1/settings',  settingsRoutes)
   app.use('/api/v1/parts',     partsRoutes)
   app.use('/api/v1/chatbot',   faqRoutes)   // Chatbot reuses FAQ routes

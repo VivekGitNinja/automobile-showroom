@@ -38,6 +38,8 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
   })
 
   const [specsKV, setSpecsKV] = useState<{key: string, value: string}[]>([])
+  const [archetype3d, setArchetype3d] = useState('auto')
+  const [model3dUrl, setModel3dUrl] = useState('')
   const [stories, setStories] = useState<{sectionType: string, title: string, content: string}[]>([])
   const [frames360, setFrames360] = useState<{imageUrl: string, displayOrder: number}[]>([])
   const [sounds, setSounds] = useState<{soundType: string, audioUrl: string}[]>([])
@@ -64,9 +66,13 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
         mediaCategory: 'exterior'
       })
       if (vehicle.specsJson) {
-        setSpecsKV(Object.entries(vehicle.specsJson).map(([k, v]) => ({ key: k, value: String(v) })))
+        setSpecsKV(Object.entries(vehicle.specsJson).filter(([k]) => k !== 'archetype3d' && k !== 'model3dUrl').map(([k, v]) => ({ key: k, value: String(v) })))
+        setArchetype3d((vehicle.specsJson as any).archetype3d || 'auto')
+        setModel3dUrl((vehicle.specsJson as any).model3dUrl || '')
       } else {
         setSpecsKV([])
+        setArchetype3d('auto')
+        setModel3dUrl('')
       }
       setStories(vehicle.stories || [])
       setFrames360(vehicle.frames360 || [])
@@ -84,6 +90,13 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
         if (curr.key) acc[curr.key] = curr.value
         return acc
       }, {} as Record<string, string>)
+
+      if (archetype3d && archetype3d !== 'auto') {
+        specsJson.archetype3d = archetype3d
+      }
+      if (model3dUrl) {
+        specsJson.model3dUrl = model3dUrl
+      }
 
       const payload = {
         ...formData,
@@ -186,6 +199,52 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
                   <option value="automatic">Automatic</option>
                   <option value="manual">Manual</option>
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 3D Digital Twin & Stage Model */}
+          <div className="space-y-4 p-5 rounded-2xl bg-dark-card border border-gold/20">
+            <div className="flex items-center justify-between border-b border-dark-border pb-2">
+              <div>
+                <h3 className="text-gold font-mono uppercase tracking-widest text-xs font-bold">
+                  3D Studio & Digital Twin Config
+                </h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Configure the vehicle&apos;s interactive 3D model, CAD geometry, and TopView blueprint archetype.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">
+                  3D Archetype Preset
+                </label>
+                <select
+                  value={archetype3d}
+                  onChange={(e) => setArchetype3d(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-dark border border-dark-border text-white text-sm focus:outline-none focus:border-gold"
+                >
+                  <option value="auto">Auto-Detect (from Make / Model / Body Type)</option>
+                  <option value="suv">Luxury SUV & 4x4 Off-Road (G-Class, Urus, Cullinan)</option>
+                  <option value="supercar">Exotic Supercar / Hypercar (Aventador, Ferrari, GT)</option>
+                  <option value="sedan">Executive Stately Saloon (Rolls-Royce, Maybach)</option>
+                  <option value="coupe">Grand Tourer Coupe (Porsche 911, Aston Martin)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">
+                  Custom 3D Model Asset (.glb URL)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. /models/ferrari.glb or custom CDN URL"
+                  value={model3dUrl}
+                  onChange={(e) => setModel3dUrl(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-dark border border-dark-border text-white text-sm focus:outline-none focus:border-gold"
+                />
               </div>
             </div>
           </div>

@@ -11,7 +11,9 @@ import { SITE_URL } from '../../lib/site'
 const contactSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine(val => !val || val.trim().length === 0 || val.trim().length >= 7, {
+    message: "Phone number must be at least 7 digits if provided"
+  }),
   message: z.string().min(10, "Message must be at least 10 characters long")
 })
 
@@ -90,7 +92,7 @@ export default function ContactPage() {
         body: JSON.stringify({
           fullName: formData.fullName,
           email: formData.email,
-          phone: formData.phone || 'N/A',
+          phone: formData.phone && formData.phone.trim().length >= 7 ? formData.phone.trim() : '+971 4 000 0000',
           message: formData.message,
           leadType: 'enquiry',
           company_website: companyWebsite,
