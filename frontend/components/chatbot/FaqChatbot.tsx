@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, X, Send, Phone, RefreshCw, ShieldCheck, ChevronRight, User, Sparkles, Calendar, ArrowUpRight, Crown } from 'lucide-react'
+import { MessageSquare, X, Send, Phone, RefreshCw, ShieldCheck, ChevronRight, User, Sparkles, Calendar, ArrowUpRight, Crown, GripVertical } from 'lucide-react'
 import BookingModal from '../BookingModal'
 import CallbackModal from '../CallbackModal'
 import { API_BASE_URL } from '../../lib/api'
@@ -46,6 +46,16 @@ export default function FaqChatbot() {
   const [faqs, setFaqs] = useState<FlatFaq[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [whatsappNumber, setWhatsappNumber] = useState(FALLBACK_WHATSAPP)
+  const [windowHeight, setWindowHeight] = useState(800)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setWindowHeight(window.innerHeight)
+      const onResize = () => setWindowHeight(window.innerHeight)
+      window.addEventListener('resize', onResize)
+      return () => window.removeEventListener('resize', onResize)
+    }
+  }, [])
 
   const chatEndRef = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
@@ -246,32 +256,87 @@ export default function FaqChatbot() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-[999]">
-        {/* Floating Trigger Badge */}
+      {/* ── Apple-Style Draggable Floating Concierge & WhatsApp Island Deck ── */}
+      <motion.div
+        drag="y"
+        dragConstraints={{ top: -Math.max(windowHeight - 240, 200), bottom: 10 }}
+        dragElastic={0.08}
+        dragMomentum={false}
+        className="fixed bottom-6 right-4 sm:right-8 z-[999] select-none touch-none"
+      >
+        {/* Apple Dynamic Island Capsule */}
         {!isOpen && (
-          <motion.button
-            aria-label="Open VIP Concierge Live Assistant"
-            aria-haspopup="dialog"
-            aria-expanded={false}
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            whileHover={{ scale: 1.05 }}
-            onClick={() => setIsOpen(true)}
-            className="relative flex items-center gap-3.5 px-6 py-4 rounded-full bg-[#080808]/95 border border-[#C9A227]/40 text-white font-mono font-bold text-xs uppercase tracking-[0.15em] shadow-[0_0_30px_rgba(201,162,39,0.3)] backdrop-blur-2xl group"
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            whileHover={{ scale: 1.02 }}
+            whileDrag={{ scale: 1.04, cursor: 'grabbing' }}
+            className="relative flex items-center p-1.5 sm:p-2 rounded-full bg-[#08080a]/85 backdrop-blur-3xl border border-white/20 shadow-[0_16px_45px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.25)] ring-1 ring-white/10 group cursor-grab active:cursor-grabbing"
           >
-            <div className="relative flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-[#C9A227] text-black flex items-center justify-center shadow-md">
-                <Crown className="w-4 h-4" />
+            {/* Apple Drag Grip Indicator */}
+            <div
+              className="flex items-center justify-center pl-2 pr-1 text-white/30 hover:text-white/70 transition-colors cursor-grab active:cursor-grabbing"
+              title="Drag up or down to reposition"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+
+            {/* Segment 1: VIP Concierge Live Assistant */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              aria-label="Open VIP Concierge Live Assistant"
+              className="flex items-center gap-2.5 sm:gap-3 py-2 px-3 sm:px-4 rounded-full hover:bg-white/[0.08] transition-all duration-200 text-left"
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#A68019] via-[#C9A227] to-[#F3D77B] text-black flex items-center justify-center shadow-[0_2px_10px_rgba(201,162,39,0.35)]">
+                  <Crown className="w-4 h-4 text-black drop-shadow-sm" />
+                </div>
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-black animate-pulse" />
               </div>
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border-2 border-black animate-pulse" />
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] text-[#C9A227] font-mono tracking-widest flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> VIP Concierge
-              </span>
-              <span className="text-xs font-serif font-bold text-white tracking-wide">Live Assistant</span>
-            </div>
-          </motion.button>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-mono font-bold tracking-widest text-[#C9A227] uppercase flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5" /> Concierge
+                </span>
+                <span className="text-xs font-semibold text-white tracking-tight">Live Assistant</span>
+              </div>
+            </button>
+
+            {/* Apple Hairline Divider */}
+            <div className="w-[1px] h-6 bg-white/15 my-auto" />
+
+            {/* Segment 2: WhatsApp VIP Desk */}
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Connect with VIP Concierge on WhatsApp"
+              className="flex items-center gap-2.5 sm:gap-3 py-2 px-3 sm:px-4 rounded-full hover:bg-white/[0.08] transition-all duration-200 text-left"
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#25D366] text-black flex items-center justify-center shadow-[0_2px_10px_rgba(37,211,102,0.35)]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    viewBox="0 0 16 16"
+                    className="text-black"
+                  >
+                    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.622 2.94-6.592 6.592-6.592a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
+                  </svg>
+                </div>
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#25D366] border-2 border-black animate-pulse" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-mono font-bold tracking-widest text-emerald-400 uppercase">
+                  WhatsApp
+                </span>
+                <span className="text-xs font-semibold text-white tracking-tight">Direct Desk</span>
+              </div>
+            </a>
+          </motion.div>
         )}
 
         {/* Chatbot Window */}
@@ -284,18 +349,23 @@ export default function FaqChatbot() {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              transition={{ duration: 0.25 }}
-              className="relative w-[370px] max-w-[calc(100vw-3rem)] sm:w-[440px] h-[620px] max-h-[calc(100vh-6rem)] rounded-3xl bg-[#060606]/95 backdrop-blur-3xl border border-[#C9A227]/30 shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden text-xs"
+              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              className="relative w-[370px] max-w-[calc(100vw-2rem)] sm:w-[440px] h-[620px] max-h-[calc(100vh-6rem)] rounded-[32px] bg-[#08080a]/90 backdrop-blur-3xl border border-white/20 shadow-[0_24px_70px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.2)] flex flex-col overflow-hidden text-xs"
             >
+              {/* iOS Drag Handle on top of open modal */}
+              <div className="pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing" title="Drag up or down to reposition">
+                <div className="w-10 h-1 rounded-full bg-white/25 hover:bg-white/50 transition-colors" />
+              </div>
+
               {/* Header */}
-              <div className="p-4 bg-[#0A0A0A] border-b border-white/10 flex items-center justify-between">
+              <div className="px-5 py-3.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border border-[#C9A227]/50 flex items-center justify-center bg-[#C9A227]/10 shadow-md">
-                    <ShieldCheck className="w-5 h-5 text-[#C9A227]" />
+                  <div className="w-10 h-10 rounded-full border border-[#C9A227]/40 flex items-center justify-center bg-[#C9A227]/10 shadow-[0_2px_12px_rgba(201,162,39,0.25)]">
+                    <Crown className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-serif font-bold text-white text-base">Apex VIP Concierge</h4>
+                      <h4 className="font-serif font-bold text-white text-base tracking-wide">Apex VIP Concierge</h4>
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
                     <span className="text-[10px] text-white/50 font-mono uppercase tracking-widest block">
@@ -304,12 +374,22 @@ export default function FaqChatbot() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-white/60">
-                  <button onClick={handleReset} title="Reset Chat" aria-label="Reset Conversation" className="p-2 hover:text-[#C9A227] transition">
-                    <RefreshCw className="w-4 h-4" />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleReset}
+                    title="Reset Chat"
+                    aria-label="Reset Conversation"
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition flex items-center justify-center"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => setIsOpen(false)} title="Close Chat" aria-label="Close VIP Concierge Chat" className="p-2 hover:text-white transition">
-                    <X className="w-5 h-5" />
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    title="Close Chat"
+                    aria-label="Close VIP Concierge Chat"
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -451,7 +531,7 @@ export default function FaqChatbot() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       <BookingModal
         isOpen={bookingModalOpen}

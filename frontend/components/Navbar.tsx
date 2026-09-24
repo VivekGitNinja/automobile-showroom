@@ -87,9 +87,6 @@ export default function Navbar() {
                   </Link>
                 )
               })}
-              <Link href="/admin" className="px-4 py-1.5 rounded-full glass-panel border border-[#C9A227]/30 text-[#C9A227] hover:bg-[#C9A227] hover:text-black hover:border-[#C9A227] transition-all duration-300">
-                Admin
-              </Link>
             </nav>
 
             {/* CTA Buttons */}
@@ -135,12 +132,9 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <Link href="/admin" className="block text-[#C9A227] font-bold border-t border-white/10 pt-6" onClick={() => setMobileMenuOpen(false)}>
-              CMS Admin
-            </Link>
             <a
               href={waLink()}
-              className="flex items-center gap-2 text-[#C9A227] font-bold mt-4"
+              className="flex items-center gap-2 text-[#C9A227] font-bold border-t border-white/10 pt-6"
               onClick={() => setMobileMenuOpen(false)}
             >
               <Phone className="w-4 h-4" />

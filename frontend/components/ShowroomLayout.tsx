@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import FaqChatbot from './chatbot/FaqChatbot'
-import WhatsAppFloatingButton from './WhatsAppFloatingButton'
 import PageTransition from './PageTransition'
 import { SITE_URL } from '../lib/site'
 
@@ -70,7 +69,6 @@ export default function ShowroomLayout({ children }: ShowroomLayoutProps) {
       </main>
       <Footer />
       <FaqChatbot />
-      <WhatsAppFloatingButton />
     </>
   )
 }
