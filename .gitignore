@@ -16,6 +16,7 @@ out/
 
 # Production builds
 dist/
+*.tsbuildinfo
 
 # Logs
 logs/
