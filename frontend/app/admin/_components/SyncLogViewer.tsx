@@ -32,6 +32,8 @@ export default function SyncLogViewer() {
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
+  const [syncing, setSyncing] = useState(false)
+
   const fetchLogs = async () => {
     setLoading(true)
     setError(null)
@@ -59,6 +61,18 @@ export default function SyncLogViewer() {
     }
   }
 
+  const triggerSync = async () => {
+    setSyncing(true)
+    try {
+      await adminFetch(`${API_BASE_URL}/admin/sync`, { method: 'POST' })
+      await fetchLogs()
+    } catch {
+      setError('Sync trigger failed.')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   useEffect(() => {
     fetchLogs()
   }, [])
@@ -77,47 +91,62 @@ export default function SyncLogViewer() {
 
   return (
     <div className="bg-[#0A0A0A] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-      <div className="p-8 border-b border-white/5 flex items-center justify-between">
+      <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-2xl font-serif font-bold text-white mb-2">Sync Telemetry</h3>
           <p className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest">
             Data Warehouse Synchronization Logs
           </p>
         </div>
-        <button
-          onClick={fetchLogs}
-          disabled={loading}
-          className="h-10 px-6 rounded-full bg-black border border-white/10 text-white hover:border-[#C9A227] hover:text-[#C9A227] font-mono text-[10px] uppercase tracking-widest font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Logs</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={triggerSync}
+            disabled={syncing}
+            className="h-10 px-5 rounded-full bg-[#C9A227] text-black hover:bg-white font-mono text-[10px] uppercase tracking-widest font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? 'Syncing...' : 'Trigger Sync'}</span>
+          </button>
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="h-10 px-5 rounded-full bg-black border border-white/10 text-white hover:border-[#C9A227] hover:text-[#C9A227] font-mono text-[10px] uppercase tracking-widest font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh Logs</span>
+          </button>
+        </div>
       </div>
 
       {syncStatus && !syncStatus.configured && (
         <div className="p-6 m-6 bg-[#C9A227]/5 border border-[#C9A227]/20 rounded-2xl">
           <div className="flex items-start gap-4">
             <AlertCircle className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-white">Google Sheets Integration Not Configured</h4>
-              <p className="text-xs text-[#A0A0A0]">
-                Automated inventory synchronization is in safe standby mode. To connect your Google Sheet:
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-white">Google Sheets Integration — Safe Standby Mode</h4>
+              <p className="text-xs text-[#A0A0A0] leading-relaxed">
+                Automated Google Sheets synchronization links this showroom database with an external Google Spreadsheet. The engine is currently in safe standby mode with complete local CMS autonomy — all current vehicle inventory, pricing, and uploaded media are 100% active and protected.
               </p>
-              <ul className="text-xs text-[#A0A0A0] space-y-1 list-disc pl-4 mt-2">
-                <li>
-                  <span className={syncStatus.spreadsheetConfigured ? 'text-[#3DD598]' : 'text-[#C9A227]'}>
-                    {syncStatus.spreadsheetConfigured ? '✓' : '○'} GOOGLE_SHEET_ID: {syncStatus.spreadsheetConfigured ? 'Configured' : 'Missing'}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+                <div className="p-3 bg-black/50 border border-white/5 rounded-xl">
+                  <span className="text-[10px] text-[#7A7A7A] uppercase font-mono block">Spreadsheet ID</span>
+                  <span className={syncStatus.spreadsheetConfigured ? 'text-[#3DD598] font-bold' : 'text-[#C9A227]'}>
+                    {syncStatus.spreadsheetConfigured ? 'Configured' : 'Standby'}
                   </span>
-                </li>
-                <li>
-                  <span className={(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'text-[#3DD598]' : 'text-[#C9A227]'}>
-                    {(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? '✓' : '○'} Google Service Account: {(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'Configured' : 'Missing'}
+                </div>
+                <div className="p-3 bg-black/50 border border-white/5 rounded-xl">
+                  <span className="text-[10px] text-[#7A7A7A] uppercase font-mono block">Service Account</span>
+                  <span className={(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'text-[#3DD598] font-bold' : 'text-[#C9A227]'}>
+                    {(syncStatus.serviceAccountJsonConfigured || syncStatus.serviceAccountPairConfigured) ? 'Configured' : 'Standby'}
                   </span>
-                </li>
-                <li>Target Tab: <code className="text-[#C9A227]">{syncStatus.sheetName || 'Inventory'}</code></li>
-              </ul>
+                </div>
+                <div className="p-3 bg-black/50 border border-white/5 rounded-xl">
+                  <span className="text-[10px] text-[#7A7A7A] uppercase font-mono block">Target Tab</span>
+                  <span className="text-white font-mono">{syncStatus.sheetName || 'Inventory'}</span>
+                </div>
+              </div>
               <p className="text-[11px] text-[#7A7A7A] pt-1 font-mono">
-                Run <code className="text-white">npx ts-node scripts/test-sync.ts</code> or consult <code className="text-white">SETUP.md §3</code>.
+                To activate bi-directional sync, configure your Google Cloud Service Account credentials in the server environment (.env).
               </p>
             </div>
           </div>
@@ -154,51 +183,70 @@ export default function SyncLogViewer() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {logs.map(log => (
-                <React.Fragment key={log.id}>
-                  <tr className="hover:bg-white/[0.02] transition-colors">
-                    <td className="p-6 text-white">{new Date(log.timestamp).toLocaleString()}</td>
-                    <td className="p-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] uppercase tracking-widest border ${
-                        log.status === 'success' ? 'bg-[#3DD598]/10 text-[#3DD598] border-[#3DD598]/30' :
-                        log.status === 'partial' ? 'bg-[#C9A227]/10 text-[#C9A227] border-[#C9A227]/30' :
-                        'bg-red-500/10 text-red-500 border-red-500/30'
-                      }`}>
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="p-6 text-white">{log.totalRows}</td>
-                    <td className="p-6 text-[#3DD598]">{log.added}</td>
-                    <td className="p-6 text-[#C9A227]">{log.updated}</td>
-                    <td className="p-6 text-[#7A7A7A]">{log.skipped}</td>
-                    <td className="p-6 text-red-500">{log.errors}</td>
-                    <td className="p-6 text-right">
-                      {log.errors > 0 && (
-                        <button
-                          onClick={() => toggleRow(log.id)}
-                          className="text-[#7A7A7A] hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
-                        >
-                          {expandedRows.has(log.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedRows.has(log.id) && log.errorDetails && log.errorDetails.length > 0 && (
-                    <tr className="bg-black/50">
-                      <td colSpan={8} className="p-6">
-                        <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 space-y-2">
-                          <h4 className="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-3">Error Details</h4>
-                          <ul className="list-disc pl-5 text-[#A0A0A0] text-[11px] space-y-1">
-                            {log.errorDetails.map((err, i) => (
-                              <li key={i}>{err}</li>
-                            ))}
-                          </ul>
-                        </div>
+              {logs.map(log => {
+                const ts = log.timestamp || (log as any).startedAt
+                const dateStr = ts ? new Date(ts).toLocaleString() : 'N/A'
+                const total = log.totalRows ?? (log as any).rowsProcessed ?? 0
+                const added = log.added ?? (log as any).rowsInserted ?? 0
+                const updated = log.updated ?? (log as any).rowsUpdated ?? 0
+                const skipped = log.skipped ?? 0
+                let errorDetails: string[] = log.errorDetails || []
+                if (!errorDetails.length && (log as any).errorsJson) {
+                  try {
+                    const parsed = typeof (log as any).errorsJson === 'string' ? JSON.parse((log as any).errorsJson) : (log as any).errorsJson
+                    errorDetails = Array.isArray(parsed) ? parsed : [String(parsed)]
+                  } catch {
+                    errorDetails = [String((log as any).errorsJson)]
+                  }
+                }
+                const errorCount = log.errors ?? errorDetails.length
+
+                return (
+                  <React.Fragment key={log.id}>
+                    <tr className="hover:bg-white/[0.02] transition-colors">
+                      <td className="p-6 text-white">{dateStr}</td>
+                      <td className="p-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] uppercase tracking-widest border ${
+                          log.status === 'success' ? 'bg-[#3DD598]/10 text-[#3DD598] border-[#3DD598]/30' :
+                          log.status === 'partial' ? 'bg-[#C9A227]/10 text-[#C9A227] border-[#C9A227]/30' :
+                          'bg-red-500/10 text-red-500 border-red-500/30'
+                        }`}>
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="p-6 text-white">{total}</td>
+                      <td className="p-6 text-[#3DD598]">{added}</td>
+                      <td className="p-6 text-[#C9A227]">{updated}</td>
+                      <td className="p-6 text-[#7A7A7A]">{skipped}</td>
+                      <td className="p-6 text-red-500">{errorCount}</td>
+                      <td className="p-6 text-right">
+                        {errorCount > 0 && (
+                          <button
+                            onClick={() => toggleRow(log.id)}
+                            className="text-[#7A7A7A] hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
+                          >
+                            {expandedRows.has(log.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {expandedRows.has(log.id) && errorDetails.length > 0 && (
+                      <tr className="bg-black/50">
+                        <td colSpan={8} className="p-6">
+                          <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 space-y-2">
+                            <h4 className="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-3">Error Details</h4>
+                            <ul className="list-disc pl-5 text-[#A0A0A0] text-[11px] space-y-1">
+                              {errorDetails.map((err, i) => (
+                                <li key={i}>{err}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </tbody>
           </table>
         )}

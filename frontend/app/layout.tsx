@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import '../styles/globals.css'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import FaqChatbot from '../components/chatbot/FaqChatbot'
-import PageTransition from '../components/PageTransition'
-import WhatsAppFloatingButton from '../components/WhatsAppFloatingButton'
+import ShowroomLayout from '../components/ShowroomLayout'
 import { GoogleTagManager } from '@next/third-parties/google'
 import { ToastProvider } from '../lib/useToast'
 import ToastContainer from '../components/ui/Toast'
@@ -62,49 +58,8 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="bg-dark text-gray-100 min-h-screen flex flex-col antialiased selection:bg-[#C9A227] selection:text-dark">
         <ToastProvider>
-          <Navbar />
-        <main className="flex-1">
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "AutoDealer",
-                "name": "Apex Luxury Automobiles",
-                "description": "Dubai's Premier Ultra-Luxury Automobile Showroom",
-                "url": SITE_URL,
-                "telephone": "+971508919441",
-                "address": {
-                  "@type": "PostalAddress",
-                  "streetAddress": "Sheikh Zayed Road, Business Bay",
-                  "addressLocality": "Dubai",
-                  "addressRegion": "Dubai",
-                  "postalCode": "00000",
-                  "addressCountry": "AE"
-                },
-                "geo": {
-                  "@type": "GeoCoordinates",
-                  "latitude": 25.1972,
-                  "longitude": 55.2744
-                },
-                "openingHoursSpecification": {
-                  "@type": "OpeningHoursSpecification",
-                  "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-                  "opens": "10:00",
-                  "closes": "22:00"
-                },
-                "priceRange": "$$$$"
-              })
-            }}
-          />
-          <PageTransition>
-            {children}
-          </PageTransition>
-        </main>
-        <Footer />
-        <FaqChatbot />
-        <WhatsAppFloatingButton />
-        <ToastContainer />
+          <ShowroomLayout>{children}</ShowroomLayout>
+          <ToastContainer />
         </ToastProvider>
       </body>
       {process.env.NEXT_PUBLIC_GTM_ID && (

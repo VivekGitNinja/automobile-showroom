@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit, Trash, MessageSquare, Loader2, X } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Edit, Trash, MessageSquare, Loader2, X, ArrowLeft } from 'lucide-react'
 import { FaqCategory, FaqItem } from '../../../lib/types'
 import { API_BASE_URL } from '../../../lib/api'
 import { adminFetch } from '../../../lib/adminFetch'
@@ -163,9 +164,17 @@ export default function FAQAdminPage() {
   }
 
   return (
-    <div className="pt-36 sm:pt-40 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#050505] text-white p-6 sm:p-10 max-w-7xl mx-auto">
+      <Link 
+        href="/admin" 
+        className="inline-flex items-center gap-2 text-xs font-mono text-[#C9A227] hover:text-white transition-colors mb-8 uppercase tracking-widest px-4 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-[#C9A227]/30"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        <span>Back to Command Center</span>
+      </Link>
+
       {feedback && (
-        <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full text-sm font-mono z-50 shadow-2xl ${
+        <div className={`fixed top-8 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full text-sm font-mono z-50 shadow-2xl ${
           feedback.type === 'success' ? 'bg-[#3DD598]/20 text-[#3DD598] border border-[#3DD598]/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'
         }`}>
           {feedback.message}

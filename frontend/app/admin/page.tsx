@@ -1,7 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { ShieldCheck, Plus, RefreshCw, Layers, Users, Database, LogOut, Lock, Key, CheckCircle, Loader2, UploadCloud, Image as ImageIcon, FileText, Film, Settings, Edit, Trash2, Star } from 'lucide-react'
+import Link from 'next/link'
+import { 
+  ShieldCheck, Plus, RefreshCw, Layers, Users, Database, LogOut, Lock, Key, CheckCircle, 
+  Loader2, UploadCloud, Image as ImageIcon, FileText, Film, Settings, Edit, Trash2, Star,
+  CarFront, Package, BookOpen, ExternalLink, HelpCircle, ChevronRight
+} from 'lucide-react'
 import { API_BASE_URL } from '../../lib/api'
 import { Vehicle } from '../../lib/types'
 import AddVehicleModal from '../../components/AddVehicleModal'
@@ -34,10 +39,7 @@ export default function AdminDashboardPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedVehicleForEdit, setSelectedVehicleForEdit] = useState<Vehicle | null>(null)
   
-  const [syncLog, setSyncLog] = useState<string[]>([
-    'System ready. Connected to PostgreSQL 15.',
-    'Awaiting sync trigger.',
-  ])
+  const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'info' | 'error', text: string } | null>(null)
 
   // DAM State
   const [damFiles, setDamFiles] = useState<{name: string, size: number, type: string, progress: number, status: 'uploading'|'success'|'error', url?: string, error?: string}[]>([])
@@ -113,35 +115,37 @@ export default function AdminDashboardPage() {
 
   const handleTriggerSync = async () => {
     setSyncing(true)
-    const timestamp = new Date().toLocaleTimeString()
-    setSyncLog((prev) => [`[${timestamp}] Initiated Google Sheets sync worker...`, ...prev])
+    setSyncStatusMsg(null)
 
     try {
       const res = await adminFetch(`${API_BASE_URL}/admin/sync`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
-        setSyncLog((prev) => [
-          `[${new Date().toLocaleTimeString()}] ✅ Sync complete: ${data.data?.message || 'Updated from Google Spreadsheet.'}`,
-          ...prev,
-        ])
+        setSyncStatusMsg({
+          type: 'success',
+          text: data.data?.message || 'Inventory synchronized successfully with Google Sheets.'
+        })
         fetchData()
       } else {
         const errorMsg = data.data?.message || data.data?.error || data.message || 'Sync failed'
         if (errorMsg.includes('not configured') || errorMsg.includes('missing')) {
-           setSyncLog((prev) => [
-             `[${new Date().toLocaleTimeString()}] ⚠️ Sync Configuration Required: Google Sheets credentials missing in .env`,
-             ...prev,
-           ])
+          setSyncStatusMsg({
+            type: 'info',
+            text: 'Google Sheets sync is in safe standby mode. Local showroom inventory and uploads are 100% active and preserved.'
+          })
         } else {
-           throw new Error(errorMsg)
+          setSyncStatusMsg({
+            type: 'error',
+            text: errorMsg
+          })
         }
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      setSyncLog((prev) => [
-        `[${new Date().toLocaleTimeString()}] ❌ Sync failed: ${errorMessage}`,
-        ...prev,
-      ])
+      setSyncStatusMsg({
+        type: 'error',
+        text: `Sync error: ${errorMessage}`
+      })
     } finally {
       setSyncing(false)
     }
@@ -292,47 +296,205 @@ export default function AdminDashboardPage() {
     )
   }
 
+  interface SidebarNavItem {
+    id: 'inventory' | 'leads' | 'acquisition' | 'parts' | 'journal' | 'dam' | 'sync' | 'settings'
+    label: string
+    icon: React.ElementType
+    badge?: number
+  }
+
+  const sidebarNavItems: SidebarNavItem[] = [
+    { id: 'inventory', label: 'Fleet Inventory', icon: Layers, badge: vehicles.length },
+    { id: 'leads', label: 'Captured Prospects', icon: Users, badge: leads.length },
+    { id: 'acquisition', label: 'Sell-Car Inbox', icon: CarFront },
+    { id: 'parts', label: 'Spare Parts', icon: Package },
+    { id: 'journal', label: 'Editorial Journal', icon: BookOpen },
+    { id: 'dam', label: 'Asset Pipeline', icon: Database },
+    { id: 'sync', label: 'Warehouse Sync', icon: RefreshCw },
+    { id: 'settings', label: 'Showroom Settings', icon: Settings },
+  ]
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white pt-36 sm:pt-40 pb-12">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Enterprise Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-white/10 pb-8">
-          <div>
-            <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.3em] text-[#C9A227] mb-3">
-              <ShieldCheck className="w-4 h-4" />
-              <span>System Authenticated • Root Level</span>
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col lg:flex-row antialiased">
+      {/* ─── DESKTOP ENTERPRISE SIDEBAR ─── */}
+      <aside className="w-72 hidden lg:flex flex-col shrink-0 min-h-screen bg-[#080808] border-r border-white/5 sticky top-0 h-screen overflow-y-auto">
+        {/* Brand & Root Header */}
+        <div className="p-6 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#C9A227]/10 border border-[#C9A227]/30 flex items-center justify-center text-[#C9A227]">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-serif font-extrabold tracking-tight">
-              Enterprise <span className="italic font-light text-white/70">Command Center</span>
-            </h1>
+            <div>
+              <h2 className="text-base font-serif font-bold text-white tracking-wide">Apex CMS Core</h2>
+              <span className="text-[9px] font-mono text-[#C9A227] uppercase tracking-[0.2em] block">Root Command Center</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex bg-[#0A0A0A] border border-white/10 rounded-full p-1">
-               {(['inventory', 'leads', 'acquisition', 'parts', 'journal', 'dam', 'sync', 'settings'] as const).map(tab => (
-                 <button 
-                   key={tab}
-                   onClick={() => setActiveTab(tab)}
-                   className={`px-6 py-2.5 rounded-full text-[10px] font-mono uppercase tracking-[0.2em] transition-colors ${activeTab === tab ? 'bg-white text-black font-bold' : 'text-[#7A7A7A] hover:text-white'}`}
-                 >
-                   {tab}
-                 </button>
-               ))}
+          <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-mono text-[#3DD598] uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3DD598] animate-pulse"></span>
+              Live Gateway
+            </span>
+            <a 
+              href="/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-[9px] font-mono text-[#A0A0A0] hover:text-[#C9A227] transition-colors flex items-center gap-1 uppercase tracking-widest"
+              title="Open public showroom in new tab"
+            >
+              <span>Showroom</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
+        </div>
+
+        {/* Navigation Sections */}
+        <div className="flex-1 py-6 px-4 space-y-6">
+          <div>
+            <span className="px-3 text-[9px] font-mono text-[#7A7A7A] uppercase tracking-[0.25em] block mb-2 font-bold">
+              Showroom Operations
+            </span>
+            <nav className="space-y-1">
+              {sidebarNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive = activeTab === item.id
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono transition-all text-left group ${
+                      isActive 
+                        ? 'bg-[#C9A227] text-black font-bold shadow-[0_0_20px_rgba(201,162,39,0.25)]' 
+                        : 'text-[#A0A0A0] hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-black' : 'text-[#7A7A7A] group-hover:text-[#C9A227]'}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono ${
+                        isActive ? 'bg-black text-[#C9A227]' : 'bg-white/10 text-white'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          <div>
+            <span className="px-3 text-[9px] font-mono text-[#7A7A7A] uppercase tracking-[0.25em] block mb-2 font-bold">
+              Knowledgebase & AI
+            </span>
+            <Link
+              href="/admin/faqs"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono text-[#A0A0A0] hover:text-white hover:bg-white/5 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <HelpCircle className="w-4 h-4 text-[#7A7A7A] group-hover:text-[#C9A227] transition-colors" />
+                <span>FAQ Chatbot CMS</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-[#555] group-hover:text-white transition-colors" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Administrator Profile & Terminate Session */}
+        <div className="p-4 border-t border-white/5 bg-[#050505]">
+          <div className="flex items-center justify-between mb-3 px-2">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="w-7 h-7 rounded-full bg-[#C9A227]/20 border border-[#C9A227]/40 flex items-center justify-center text-[10px] font-mono font-bold text-[#C9A227] shrink-0">
+                A
+              </div>
+              <div className="truncate">
+                <p className="text-[11px] font-mono font-bold text-white truncate">Apex Admin</p>
+                <p className="text-[9px] font-mono text-[#7A7A7A] truncate">admin@apex.ae</p>
+              </div>
             </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full py-2.5 px-3 rounded-xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/20 text-red-400 font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
+            title="Terminate Session"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Terminate Session</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ─── MAIN WORKSPACE CANVAS ─── */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-[#050505]">
+        {/* Top Control Bar with Breadcrumbs & Telemetry Status */}
+        <header className="h-16 px-6 sm:px-8 border-b border-white/5 bg-[#080808]/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-40">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest">Portal</span>
+            <span className="text-white/30">/</span>
+            <span className="text-[10px] font-mono text-[#C9A227] uppercase tracking-widest capitalize font-bold">
+              {activeTab}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-3 text-[10px] font-mono">
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Cloud API Online
+              </span>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C9A227]/10 border border-[#C9A227]/20 text-[#C9A227]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227]"></span>
+                Showroom Database Active
+              </span>
+            </div>
+
             <button
               onClick={handleLogout}
-              className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-[#7A7A7A] hover:text-red-500 hover:border-red-500/50 transition-colors"
+              className="lg:hidden p-2 rounded-lg border border-white/10 text-[#7A7A7A] hover:text-red-500 transition-colors"
               title="Terminate Session"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </header>
+
+        {/* Content Body */}
+        <main className="p-6 sm:p-10 flex-1">
+          {/* Header Title & Pill Switcher */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-white/10 pb-6">
+            <div>
+              <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.3em] text-[#C9A227] mb-2">
+                <ShieldCheck className="w-4 h-4" />
+                <span>System Authenticated • Root Level</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-serif font-extrabold tracking-tight">
+                Enterprise <span className="italic font-light text-white/70">Command Center</span>
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex bg-[#0A0A0A] border border-white/10 rounded-full p-1 overflow-x-auto max-w-full">
+                {(['inventory', 'leads', 'acquisition', 'parts', 'journal', 'dam', 'sync', 'settings'] as const).map(tab => (
+                  <button 
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 sm:px-6 py-2 rounded-full text-[10px] font-mono uppercase tracking-[0.2em] transition-colors whitespace-nowrap ${
+                      activeTab === tab ? 'bg-white text-black font-bold' : 'text-[#7A7A7A] hover:text-white'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
         <AnimatePresence mode="wait">
           {activeTab === 'inventory' && (
             <motion.div key="inventory" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-white/5 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#C9A227]/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
                   <div className="flex items-center justify-between mb-4 relative z-10">
@@ -340,6 +502,7 @@ export default function AdminDashboardPage() {
                     <Layers className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <span className="text-5xl font-serif font-bold tracking-tight relative z-10">{vehicles.length}</span>
+                  <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest block mt-2">Live Showroom Fleet</span>
                 </div>
 
                 <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-white/5 relative overflow-hidden group">
@@ -348,48 +511,52 @@ export default function AdminDashboardPage() {
                     <Users className="w-5 h-5 text-[#C9A227]" />
                   </div>
                   <span className="text-5xl font-serif font-bold tracking-tight relative z-10">{leads.length}</span>
+                  <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest block mt-2">Inbound VIP Enquiries</span>
                 </div>
 
                 <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-white/5 relative overflow-hidden group">
                   <div className="flex items-center justify-between mb-4 relative z-10">
-                    <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-[0.2em]">DAM Storage</span>
-                    <Database className="w-5 h-5 text-[#C9A227]" />
+                    <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-[0.2em]">Fleet Valuation</span>
+                    <CarFront className="w-5 h-5 text-[#C9A227]" />
                   </div>
-                  <span className="text-3xl font-serif font-bold tracking-tight relative z-10 block mb-1 capitalize">
-                    {mediaProvider.replace(/-/g, ' ')}
+                  <span className="text-3xl font-serif font-bold tracking-tight relative z-10 block mb-1 text-[#C9A227]">
+                    AED {(vehicles.reduce((sum, v) => sum + (Number(v.price) || 0), 0) / 1000000).toFixed(1)}M
                   </span>
-                  <span className="text-[10px] font-mono text-[#3DD598] uppercase">Asset Storage Active</span>
+                  <span className="text-[10px] font-mono text-[#7A7A7A] uppercase tracking-widest">Total Portfolio Value</span>
                 </div>
 
                 <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-[#C9A227]/20 relative overflow-hidden group shadow-[0_0_30px_rgba(201,162,39,0.05)]">
-                  <div className="flex items-center justify-between mb-6 relative z-10">
-                    <span className="text-[10px] font-mono text-[#C9A227] uppercase tracking-[0.2em]">Google Sheets Sync</span>
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <span className="text-[10px] font-mono text-[#C9A227] uppercase tracking-[0.2em]">Warehouse Sync</span>
                     <RefreshCw className={`w-4 h-4 text-[#C9A227] ${syncing ? 'animate-spin' : ''}`} />
                   </div>
                   <button
                     onClick={handleTriggerSync}
                     disabled={syncing}
-                    className="w-full h-12 rounded-xl bg-[#C9A227] text-black hover:bg-white text-[10px] font-mono font-bold uppercase tracking-widest transition-colors relative z-10"
+                    className="w-full h-11 rounded-xl bg-[#C9A227] text-black hover:bg-white text-[10px] font-mono font-bold uppercase tracking-widest transition-colors relative z-10 mb-2"
                   >
                     {syncing ? 'Synchronizing...' : 'Trigger Sync Worker'}
                   </button>
+                  <span className="text-[9px] font-mono text-[#3DD598] uppercase tracking-widest block text-center">
+                    Standby • Local CMS Active
+                  </span>
                 </div>
               </div>
 
-              {/* Sync Log Panel */}
-              <div className="p-8 rounded-3xl bg-[#0A0A0A] border border-white/5 mb-12">
-                <h3 className="text-[10px] font-mono uppercase tracking-[0.3em] text-[#C9A227] mb-4">
-                  Global Telemetry & Sync Logs
-                </h3>
-                <div className="p-6 rounded-2xl bg-black border border-white/10 text-[11px] font-mono space-y-2 h-40 overflow-y-auto">
-                  {syncLog.map((log, idx) => (
-                    <div key={idx} className="flex gap-4 text-[#7A7A7A]">
-                      <span className="text-[#A0A0A0] shrink-0">[{new Date().toISOString()}]</span>
-                      <span className={log.includes('✅') ? 'text-[#3DD598]' : log.includes('❌') ? 'text-red-500' : 'text-white'}>{log}</span>
-                    </div>
-                  ))}
+              {/* Sync Status Banner */}
+              {syncStatusMsg && (
+                <div className={`p-4 rounded-2xl mb-8 flex items-center justify-between text-xs font-mono border transition-all ${
+                  syncStatusMsg.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                  syncStatusMsg.type === 'info' ? 'bg-[#C9A227]/10 border-[#C9A227]/30 text-[#C9A227]' :
+                  'bg-red-500/10 border-red-500/30 text-red-400'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="w-4 h-4 shrink-0" />
+                    <span>{syncStatusMsg.text}</span>
+                  </div>
+                  <button onClick={() => setSyncStatusMsg(null)} className="text-white/40 hover:text-white px-2">✕</button>
                 </div>
-              </div>
+              )}
 
               {/* Vehicles Table */}
               <div className="bg-[#0A0A0A] rounded-3xl border border-white/5 overflow-hidden">
@@ -630,30 +797,31 @@ export default function AdminDashboardPage() {
              </motion.div>
           )}
         </AnimatePresence>
+      </main>
       </div>
 
-        <AddVehicleModal 
-          isOpen={isAddModalOpen} 
-          onClose={() => setIsAddModalOpen(false)} 
-          onSuccess={fetchData} 
-        />
-        
-        <EditVehicleModal 
-          vehicle={selectedVehicleForEdit}
-          isOpen={isEditModalOpen} 
-          onClose={() => {
-            setIsEditModalOpen(false)
-            setSelectedVehicleForEdit(null)
-          }} 
-          onSuccess={fetchData} 
-        />
+      <AddVehicleModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onSuccess={fetchData} 
+      />
+      
+      <EditVehicleModal 
+        vehicle={selectedVehicleForEdit}
+        isOpen={isEditModalOpen} 
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setSelectedVehicleForEdit(null)
+        }} 
+        onSuccess={fetchData} 
+      />
 
-        <AssetManagerModal
-          isOpen={isAssetModalOpen}
-          vehicle={selectedVehicleForAssets}
-          onClose={() => setIsAssetModalOpen(false)}
-          onSuccess={fetchData}
-        />
-      </div>
+      <AssetManagerModal
+        isOpen={isAssetModalOpen}
+        vehicle={selectedVehicleForAssets}
+        onClose={() => setIsAssetModalOpen(false)}
+        onSuccess={fetchData}
+      />
+    </div>
   )
 }
