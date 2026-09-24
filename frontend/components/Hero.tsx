@@ -101,10 +101,10 @@ const HERO_MEDIA: MediaItem[] = [
 ]
 
 const ENGINE_SOUNDS = [
-  { name: 'W16 Quad-Turbo', baseFreq: 80, peakFreq: 480, duration: 2.5 },
-  { name: 'V8 Twin-Turbo', baseFreq: 110, peakFreq: 620, duration: 2.3 },
-  { name: 'V12 Atmospheric', baseFreq: 95, peakFreq: 750, duration: 2.8 },
-  { name: 'Flat-6 GT3', baseFreq: 130, peakFreq: 850, duration: 2.2 },
+  { name: 'W16 Quad-Turbo', audioUrl: '/sounds/bugatti_engine_start.mp3', duration: 5.5, baseFreq: 80, peakFreq: 480 },
+  { name: 'V8 Twin-Turbo', audioUrl: '/sounds/ferrari_engine_start.mp3', duration: 5.0, baseFreq: 110, peakFreq: 620 },
+  { name: 'V12 Atmospheric', audioUrl: '/sounds/lamborghini_engine_start.mp3', duration: 5.5, baseFreq: 95, peakFreq: 750 },
+  { name: 'Flat-6 GT3', audioUrl: '/sounds/porsche_engine_start.mp3', duration: 5.0, baseFreq: 130, peakFreq: 850 },
 ]
 
 export default function Hero({ flagship, loading }: HeroProps) {
@@ -114,6 +114,8 @@ export default function Hero({ flagship, loading }: HeroProps) {
   const [selectedEngineIndex, setSelectedEngineIndex] = useState(0)
   const [volume, setVolume] = useState(0.6)
   const [isMuted, setIsMuted] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const revTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [searchMake, setSearchMake] = useState('All')
   const [searchModel, setSearchModel] = useState('')
@@ -143,23 +145,73 @@ export default function Hero({ flagship, loading }: HeroProps) {
     return () => clearTimeout(timer)
   }, [currentMediaIndex, isPlaying, media.duration, nextMedia])
 
-  // Synthesize realistic engine rev sound via Web Audio API
+  // Play authentic supercar engine roar with Web Audio fallback
   const handleIgniteEngine = (engineIdx?: number) => {
     const targetIdx = engineIdx !== undefined ? engineIdx : selectedEngineIndex
     setSelectedEngineIndex(targetIdx)
     setRevving(true)
 
     const engine = ENGINE_SOUNDS[targetIdx]
-    setTimeout(() => setRevving(false), engine.duration * 1000)
 
-    if (isMuted || volume === 0) return
+    if (revTimeoutRef.current) {
+      clearTimeout(revTimeoutRef.current)
+      revTimeoutRef.current = null
+    }
+
+    if (isMuted || volume === 0) {
+      revTimeoutRef.current = setTimeout(() => setRevving(false), 2000)
+      return
+    }
+
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      } catch {}
+      audioRef.current = null
+    }
 
     try {
+      const audio = new Audio(engine.audioUrl)
+      audio.volume = Math.min(1, Math.max(0, volume))
+      audioRef.current = audio
+
+      const cleanup = () => {
+        setRevving(false)
+        if (audioRef.current === audio) audioRef.current = null
+      }
+
+      audio.onended = cleanup
+      audio.onerror = () => {
+        playFallbackSynth(engine)
+      }
+
+      const p = audio.play()
+      if (p !== undefined) {
+        p.then(() => {
+          revTimeoutRef.current = setTimeout(() => {
+            if (audioRef.current === audio) {
+              cleanup()
+            }
+          }, engine.duration * 1000)
+        }).catch(() => {
+          playFallbackSynth(engine)
+        })
+      }
+    } catch {
+      playFallbackSynth(engine)
+    }
+  }
+
+  const playFallbackSynth = (engine: typeof ENGINE_SOUNDS[0]) => {
+    try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
-      if (!AudioCtx) return
+      if (!AudioCtx) {
+        setRevving(false)
+        return
+      }
       const ctx = new AudioCtx()
       const now = ctx.currentTime
-
       const osc1 = ctx.createOscillator()
       const osc2 = ctx.createOscillator()
       const sub = ctx.createOscillator()
@@ -172,31 +224,28 @@ export default function Hero({ flagship, loading }: HeroProps) {
 
       const masterVol = isMuted ? 0 : volume
 
-      // Frequency Sweep
       osc1.frequency.setValueAtTime(engine.baseFreq, now)
       osc1.frequency.exponentialRampToValueAtTime(engine.peakFreq, now + 0.8)
-      osc1.frequency.exponentialRampToValueAtTime(engine.baseFreq + 20, now + engine.duration - 0.2)
+      osc1.frequency.exponentialRampToValueAtTime(engine.baseFreq + 20, now + 2.5)
 
       osc2.frequency.setValueAtTime(engine.baseFreq / 2, now)
       osc2.frequency.exponentialRampToValueAtTime(engine.peakFreq / 2, now + 0.8)
-      osc2.frequency.exponentialRampToValueAtTime(engine.baseFreq / 2 + 10, now + engine.duration - 0.2)
+      osc2.frequency.exponentialRampToValueAtTime(engine.baseFreq / 2 + 10, now + 2.5)
 
       sub.frequency.setValueAtTime(engine.baseFreq / 4, now)
       sub.frequency.exponentialRampToValueAtTime(engine.peakFreq / 4, now + 0.8)
-      sub.frequency.exponentialRampToValueAtTime(engine.baseFreq / 4, now + engine.duration - 0.2)
+      sub.frequency.exponentialRampToValueAtTime(engine.baseFreq / 4, now + 2.5)
 
-      // Filter Sweep
       filter.type = 'lowpass'
       filter.Q.value = 5
       filter.frequency.setValueAtTime(250, now)
       filter.frequency.exponentialRampToValueAtTime(4000, now + 0.8)
-      filter.frequency.exponentialRampToValueAtTime(300, now + engine.duration - 0.2)
+      filter.frequency.exponentialRampToValueAtTime(300, now + 2.5)
 
-      // Gain Envelope
       gainNode.gain.setValueAtTime(0.001, now)
       gainNode.gain.linearRampToValueAtTime(0.4 * masterVol, now + 0.2)
       gainNode.gain.linearRampToValueAtTime(0.5 * masterVol, now + 0.8)
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + engine.duration)
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 2.8)
 
       osc1.connect(filter)
       osc2.connect(filter)
@@ -208,11 +257,16 @@ export default function Hero({ flagship, loading }: HeroProps) {
       osc2.start(now)
       sub.start(now)
 
-      osc1.stop(now + engine.duration)
-      osc2.stop(now + engine.duration)
-      sub.stop(now + engine.duration)
-    } catch (e) {
-      console.error("Engine sound synthesis error:", e)
+      osc1.stop(now + 2.8)
+      osc2.stop(now + 2.8)
+      sub.stop(now + 2.8)
+
+      setTimeout(() => {
+        setRevving(false)
+        ctx.close()
+      }, 2800)
+    } catch {
+      setRevving(false)
     }
   }
 
