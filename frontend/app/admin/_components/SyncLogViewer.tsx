@@ -123,13 +123,13 @@ export default function SyncLogViewer() {
           <div className="flex items-start gap-4">
             <AlertCircle className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-white">Google Sheets Integration — Safe Standby Mode</h4>
+              <h4 className="text-sm font-semibold text-white">Google Sheets Integration Not Configured (Safe Standby Mode)</h4>
               <p className="text-xs text-[#A0A0A0] leading-relaxed">
                 Automated Google Sheets synchronization links this showroom database with an external Google Spreadsheet. The engine is currently in safe standby mode with complete local CMS autonomy — all current vehicle inventory, pricing, and uploaded media are 100% active and protected.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
                 <div className="p-3 bg-black/50 border border-white/5 rounded-xl">
-                  <span className="text-[10px] text-[#7A7A7A] uppercase font-mono block">Spreadsheet ID</span>
+                  <span className="text-[10px] text-[#7A7A7A] uppercase font-mono block">Spreadsheet ID (GOOGLE_SHEET_ID)</span>
                   <span className={syncStatus.spreadsheetConfigured ? 'text-[#3DD598] font-bold' : 'text-[#C9A227]'}>
                     {syncStatus.spreadsheetConfigured ? 'Configured' : 'Standby'}
                   </span>
@@ -146,7 +146,7 @@ export default function SyncLogViewer() {
                 </div>
               </div>
               <p className="text-[11px] text-[#7A7A7A] pt-1 font-mono">
-                To activate bi-directional sync, configure your Google Cloud Service Account credentials in the server environment (.env).
+                To activate bi-directional sync, configure your Google Cloud Service Account credentials in the server environment (.env) or test via scripts/test-sync.ts.
               </p>
             </div>
           </div>

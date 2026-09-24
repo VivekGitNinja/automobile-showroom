@@ -42,7 +42,9 @@ nginx/ssl/*.key
 nginx/ssl/*.crt
 
 # Uploads temp
-uploads/
+/uploads/
+api/public/uploads/
+frontend/public/uploads/
 
 # Note: package-lock.json files ARE committed (CI runs `npm ci --frozen-lockfile`)
 

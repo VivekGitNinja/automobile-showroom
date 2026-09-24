@@ -329,3 +329,18 @@ function playSynthesizedEngineSound(
     console.error("Supercar sound error:", err)
   }
 }
+
+export function stopEngineSound() {
+  if (activeAudio) {
+    try {
+      activeAudio.pause()
+      activeAudio.currentTime = 0
+    } catch {}
+    activeAudio = null
+  }
+  if (activeTimer) {
+    clearTimeout(activeTimer)
+    activeTimer = null
+  }
+}
+

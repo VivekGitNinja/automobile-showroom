@@ -12,26 +12,26 @@ const { chromium } = require('playwright');
   await page.goto('http://localhost:3000/inventory/mercedes-benz-g-class-2023', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
 
-  const topViewBtn = page.locator('button:has-text("TOP VIEW MCP")');
+  const topViewBtn = page.locator('button:has-text("AERO BLUEPRINT")');
   if (await topViewBtn.isVisible()) {
-    console.log('TOP VIEW MCP button visible on G-Class page');
+    console.log('AERO BLUEPRINT button visible on G-Class page');
     await topViewBtn.click();
     await page.waitForTimeout(1000);
-    const blueprintBadge = page.locator('text=BLUEPRINT MCP OVERLAY');
-    console.log('Blueprint MCP Overlay visible:', await blueprintBadge.isVisible());
+    const blueprintBadge = page.locator('text=Top-Down CAD Engineering Blueprint');
+    console.log('Blueprint Overlay visible:', await blueprintBadge.isVisible());
   }
 
   console.log('Testing Lamborghini page...');
   await page.goto('http://localhost:3000/inventory/lamborghini-aventador-svj-2022', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
 
-  const topViewBtnLambo = page.locator('button:has-text("TOP VIEW MCP")');
+  const topViewBtnLambo = page.locator('button:has-text("AERO BLUEPRINT")');
   if (await topViewBtnLambo.isVisible()) {
-    console.log('TOP VIEW MCP button visible on Lamborghini page');
+    console.log('AERO BLUEPRINT button visible on Lamborghini page');
     await topViewBtnLambo.click();
     await page.waitForTimeout(1000);
-    const blueprintBadgeLambo = page.locator('text=BLUEPRINT MCP OVERLAY');
-    console.log('Blueprint MCP Overlay visible on Lamborghini:', await blueprintBadgeLambo.isVisible());
+    const blueprintBadgeLambo = page.locator('text=Top-Down CAD Engineering Blueprint');
+    console.log('Blueprint Overlay visible on Lamborghini:', await blueprintBadgeLambo.isVisible());
   }
 
   await browser.close();

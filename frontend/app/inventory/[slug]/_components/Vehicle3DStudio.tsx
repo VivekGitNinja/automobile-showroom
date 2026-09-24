@@ -42,6 +42,7 @@ import {
 import Link from 'next/link'
 import { Vehicle, Part, PartCategory } from '../../../../lib/types'
 import { API_BASE_URL } from '../../../../lib/api'
+import { playVehicleEngineSound, stopEngineSound } from '../../../../lib/soundEngine'
 
 // ---------------------------------------------------------------------------
 // Luxury Paint Palettes & Real Clearcoat Shaders
@@ -75,7 +76,7 @@ interface CameraPreset {
 
 const CAMERA_PRESETS: CameraPreset[] = [
   { id: 'hero', label: 'Hero 3/4', pos: new THREE.Vector3(3.8, 1.8, 5.2), target: new THREE.Vector3(0, 0.4, 0) },
-  { id: 'top', label: 'Top View MCP', pos: new THREE.Vector3(0, 8.2, 0.01), target: new THREE.Vector3(0, 0, 0) },
+  { id: 'top', label: 'Top Aero Blueprint', pos: new THREE.Vector3(0, 8.2, 0.01), target: new THREE.Vector3(0, 0, 0) },
   { id: 'front', label: 'Front 0°', pos: new THREE.Vector3(0, 1.15, 5.6), target: new THREE.Vector3(0, 0.5, 0) },
   { id: 'side', label: 'Profile 90°', pos: new THREE.Vector3(5.6, 1.1, 0), target: new THREE.Vector3(0, 0.45, 0) },
   { id: 'rear', label: 'Rear Aero 180°', pos: new THREE.Vector3(0, 1.3, -5.6), target: new THREE.Vector3(0, 0.5, 0) },
@@ -314,13 +315,70 @@ interface PartHotspot3D {
   stat: string
 }
 
-const DEFAULT_HOTSPOTS_3D: PartHotspot3D[] = [
-  { id: 'aero-splitter', label: 'Active Carbon Front Splitter', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.35, 2.35), description: 'High-downforce autoclaved carbon fiber splitter with dynamic ground-effect venturis.', stat: '+140kg Front Downforce' },
-  { id: 'brakes-ceramic', label: 'Brembo Carbon-Ceramic Matrix', category: 'brakes', pos: new THREE.Vector3(1.05, 0.42, 1.45), description: '420mm cross-drilled carbon-silicon carbide rotors with 8-piston monobloc calipers.', stat: '100-0 km/h in 29.5m' },
-  { id: 'cockpit-interior', label: 'Bespoke Alcantara & Carbon Cockpit', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.08, 0.1), description: 'Hand-stitched Italian leather, forged carbon console, and digital telemetry display.', stat: 'Bespoke Craftsmanship' },
-  { id: 'powertrain-engine', label: 'V12 Powertrain & Dynamic Induction', category: 'engine-exhaust', pos: new THREE.Vector3(0, 0.92, -1.1), description: 'Naturally aspirated or twin-turbocharged powerplant with valvetronic acoustic mapping.', stat: 'Instant 9000 RPM Throttle' },
-  { id: 'active-rear-wing', label: 'Aero Vectoring Carbon Rear Wing', category: 'exterior-carbon', pos: new THREE.Vector3(0, 1.42, -2.25), description: 'Hydraulically articulated double-element carbon wing with DRS drag reduction.', stat: '850kg High-Speed Load' },
-]
+function classifyDoor(name: string): 'left' | 'right' | null {
+  const lower = name.toLowerCase()
+  if (!lower.includes('door')) return null
+  if (
+    /door[_\-\s\.]*l(?![a-z])/i.test(name) ||
+    /doorl/i.test(name) ||
+    /\bl[fr]?[_\-\s]?door/i.test(name) ||
+    /left/i.test(name)
+  ) {
+    return 'left'
+  }
+  if (
+    /door[_\-\s\.]*r(?![a-z])/i.test(name) ||
+    /doorr/i.test(name) ||
+    /\br[fr]?[_\-\s]?door/i.test(name) ||
+    /right/i.test(name)
+  ) {
+    return 'right'
+  }
+  return null
+}
+
+function getArchetypeHotspots(archetype: VehicleArchetype): PartHotspot3D[] {
+  if (archetype === 'suv') {
+    return [
+      { id: 'suv-apron', label: 'AMG Carbon Skid Plate & Apron', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.45, 2.3), description: 'Aerodynamically sculpted carbon lower apron with reinforced underbody bash plate.', stat: '+90kg High-Speed Stability' },
+      { id: 'suv-brakes', label: 'AMG 6-Piston Performance Brakes', category: 'brakes', pos: new THREE.Vector3(1.08, 0.45, 1.4), description: '400mm ventilated & perforated compound discs with red monobloc calipers.', stat: '100-0 km/h in 35.2m' },
+      { id: 'suv-cabin', label: 'Bespoke Diamond Quilted Cabin', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.25, 0.1), description: 'Handcrafted designo Nappa leather with carbon trim and ambient air fragrance.', stat: 'Handcrafted in Graz' },
+      { id: 'suv-powertrain', label: '4.0L Handcrafted AMG BiTurbo V8', category: 'engine-exhaust', pos: new THREE.Vector3(0, 1.1, 1.3), description: 'Twin-scroll hot-V turbochargers with side-pipe sports exhaust acoustic tuning.', stat: '850 Nm Peak Torque' },
+      { id: 'suv-spare', label: 'Carbon Spare Wheel Carrier & Aero', category: 'exterior-carbon', pos: new THREE.Vector3(0, 1.1, -2.25), description: 'Autoclaved dry carbon spare wheel ring and aerodynamic rear roof spoiler.', stat: 'Ultra-Lightweight Rigidity' },
+    ]
+  }
+
+  if (archetype === 'sedan') {
+    return [
+      { id: 'sedan-grille', label: 'Polished Stainless Pantheon Grille', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.55, 2.5), description: 'Hand-polished stainless steel grille illuminated by 22 bespoke LED lightbars.', stat: 'Illuminated Architecture' },
+      { id: 'sedan-brakes', label: 'Stately Regenerative Comfort Brakes', category: 'brakes', pos: new THREE.Vector3(1.05, 0.45, 1.6), description: 'Whisper-quiet ceramic composite matrix tuned for imperceptible limousine stops.', stat: 'Imperceptible Deceleration' },
+      { id: 'sedan-interior', label: 'Bespoke Starlight Headliner & Cashmere', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.25, 0.1), description: '1,344 fiber optic shooting stars woven into hand-dyed perforated hides.', stat: '1,344 Fiber Optic Stars' },
+      { id: 'sedan-engine', label: '6.75L Twin-Turbocharged V12 Powerplant', category: 'engine-exhaust', pos: new THREE.Vector3(0, 1.0, 1.4), description: 'Silky smooth twin-turbocharged twelve-cylinder with effortless waftability.', stat: 'Effortless 900 Nm' },
+      { id: 'sedan-rear', label: 'Executive Acoustic Exhaust & Aero Deck', category: 'engine-exhaust', pos: new THREE.Vector3(0, 0.9, -2.5), description: 'Active valvetronic stainless silencer system engineered for total cabin silence.', stat: 'Double-Chambered Acoustic Dampening' },
+    ]
+  }
+
+  if (archetype === 'coupe') {
+    return [
+      { id: 'coupe-splitter', label: 'SportDesign Carbon Front Splitter', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.35, 2.2), description: 'Track-calibrated carbon front lip with integrated side aero dive planes.', stat: '+110kg Front Load' },
+      { id: 'coupe-brakes', label: 'Porsche Ceramic Composite Brakes (PCCB)', category: 'brakes', pos: new THREE.Vector3(1.02, 0.42, 1.35), description: '410mm yellow monobloc carbon-silicon ceramic rotors with 50% unsprung mass reduction.', stat: '100-0 km/h in 28.9m' },
+      { id: 'coupe-cockpit', label: 'Clubsport Lightweight Carbon Buckets', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.05, 0.1), description: 'Full carbon shell racing seats trimmed in Race-Tex with six-point harness prep.', stat: '12.6kg Net Weight Saving' },
+      { id: 'coupe-powertrain', label: '4.0L High-Revving Boxer-6 & Induction', category: 'engine-exhaust', pos: new THREE.Vector3(0, 0.85, -1.8), description: 'Naturally aspirated dry-sump flat-six spinning freely to an intoxicating 9,000 RPM.', stat: '9,000 RPM Redline' },
+      { id: 'coupe-wing', label: 'Swan-Neck Carbon Fiber Rear Wing', category: 'exterior-carbon', pos: new THREE.Vector3(0, 1.35, -2.1), description: 'Top-mounted swan neck mounts delivering clean uninterrupted airflow over the airfoil.', stat: '385kg Downforce @ 200 km/h' },
+    ]
+  }
+
+  // Supercar / Hypercar Default
+  return [
+    { id: 'aero-splitter', label: 'Active Carbon Front Splitter', category: 'exterior-carbon', pos: new THREE.Vector3(0, 0.35, 2.35), description: 'High-downforce autoclaved carbon fiber splitter with dynamic ground-effect venturis.', stat: '+140kg Front Downforce' },
+    { id: 'brakes-ceramic', label: 'Brembo Carbon-Ceramic Matrix', category: 'brakes', pos: new THREE.Vector3(1.05, 0.42, 1.45), description: '420mm cross-drilled carbon-silicon carbide rotors with 8-piston monobloc calipers.', stat: '100-0 km/h in 29.5m' },
+    { id: 'cockpit-interior', label: 'Bespoke Alcantara & Carbon Cockpit', category: 'interior-comfort', pos: new THREE.Vector3(0.1, 1.08, 0.1), description: 'Hand-stitched Italian leather, forged carbon console, and digital telemetry display.', stat: 'Bespoke Craftsmanship' },
+    { id: 'powertrain-engine', label: 'V12 Powertrain & Dynamic Induction', category: 'engine-exhaust', pos: new THREE.Vector3(0, 0.92, -1.1), description: 'Naturally aspirated or twin-turbocharged powerplant with valvetronic acoustic mapping.', stat: 'Instant 9000 RPM Throttle' },
+    { id: 'active-rear-wing', label: 'Aero Vectoring Carbon Rear Wing', category: 'exterior-carbon', pos: new THREE.Vector3(0, 1.42, -2.25), description: 'Hydraulically articulated double-element carbon wing with DRS drag reduction.', stat: '850kg High-Speed Load' },
+  ]
+}
+
+const DEFAULT_HOTSPOTS_3D = getArchetypeHotspots('supercar')
 
 interface Vehicle3DStudioProps {
   vehicle?: Vehicle
@@ -395,9 +453,11 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     controls: OrbitControls
     carGroup: THREE.Group
     paintMeshes: THREE.Mesh[]
-    doorLeft?: THREE.Object3D | null
-    doorRight?: THREE.Object3D | null
-    hood?: THREE.Object3D | null
+    doorLeftPivot?: THREE.Group | null
+    doorRightPivot?: THREE.Group | null
+    hoodPivot?: THREE.Group | null
+    canopyPivot?: THREE.Group | null
+    rimLight?: THREE.SpotLight | null
     wheels: THREE.Object3D[]
     headlightSpots: THREE.SpotLight[]
     underglowLights: THREE.PointLight[]
@@ -407,15 +467,32 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     targetCamPos: THREE.Vector3 | null
     targetCamLookAt: THREE.Vector3 | null
     wireframeMaterials: Map<THREE.Mesh, THREE.Material | THREE.Material[]>
+    currentDoorAnim: number
+    currentHoodAnim: number
   } | null>(null)
 
+  const doorsOpenRef = useRef(doorsOpen)
+  doorsOpenRef.current = doorsOpen
+
+  const hoodOpenRef = useRef(hoodOpen)
+  hoodOpenRef.current = hoodOpen
+
+  const engineRunningRef = useRef(engineRunning)
+  engineRunningRef.current = engineRunning
+
+  const autoRotateRef = useRef(autoRotate)
+  autoRotateRef.current = autoRotate
+
+  const activeHotspots = getArchetypeHotspots(archetype)
+
   // Telemetry Specs
+  const vSpecs = (vehicle?.specsJson || {}) as any
   const specs = {
-    power: vehicle?.horsepower ? `${vehicle.horsepower} HP` : isSupercar ? '770 HP' : '585 HP',
-    acceleration: vehicle?.acceleration ? `${vehicle.acceleration}s` : isSupercar ? '2.8s (0-100)' : '4.5s (0-100)',
-    topSpeed: vehicle?.topSpeed ? `${vehicle.topSpeed} km/h` : isSupercar ? '355 km/h' : '240 km/h',
-    engine: vehicle?.engine || (isSupercar ? '6.5L Naturally Aspirated V12' : '4.0L Twin-Turbo V8 AMG'),
-    transmission: vehicle?.transmission || (isSupercar ? '7-Speed Dual-Clutch ISR' : 'AMG SPEEDSHIFT 9G-Tronic'),
+    power: vehicle?.horsepower ? `${vehicle.horsepower} HP` : vSpecs.horsepower || (archetype === 'suv' ? '585 HP' : archetype === 'sedan' ? '563 HP' : archetype === 'coupe' ? '510 HP' : '770 HP'),
+    acceleration: vehicle?.acceleration ? `${vehicle.acceleration}s` : vSpecs.acceleration || (archetype === 'suv' ? '4.5s (0-100)' : archetype === 'sedan' ? '4.8s (0-100)' : archetype === 'coupe' ? '3.4s (0-100)' : '2.8s (0-100)'),
+    topSpeed: vehicle?.topSpeed ? `${vehicle.topSpeed} km/h` : vSpecs.topSpeed || (archetype === 'suv' ? '240 km/h' : archetype === 'sedan' ? '250 km/h' : archetype === 'coupe' ? '318 km/h' : '355 km/h'),
+    engine: vehicle?.engine || vSpecs.engine || (archetype === 'suv' ? '4.0L Handcrafted AMG BiTurbo V8' : archetype === 'sedan' ? '6.75L Twin-Turbocharged V12' : archetype === 'coupe' ? '4.0L High-Revving Boxer-6' : '6.5L Naturally Aspirated V12'),
+    transmission: vehicle?.transmission || vSpecs.transmission || (archetype === 'suv' ? 'AMG SPEEDSHIFT 9G-Tronic' : archetype === 'sedan' ? '8-Speed Satellite-Aided Auto' : archetype === 'coupe' ? '7-Speed Dual-Clutch PDK' : '7-Speed Dual-Clutch ISR'),
   }
 
   // ---------------------------------------------------------------------------
@@ -509,9 +586,16 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     const headlightSpots: THREE.SpotLight[] = []
     const underglowLights: THREE.PointLight[] = []
     const exhaustFlames: THREE.Mesh[] = []
-    let doorLeft: THREE.Object3D | null = null
-    let doorRight: THREE.Object3D | null = null
-    let hood: THREE.Object3D | null = null
+    
+    // Dedicated mechanical animation pivots
+    const doorLeftPivot = new THREE.Group()
+    const doorRightPivot = new THREE.Group()
+    const hoodPivot = new THREE.Group()
+    const canopyPivot = new THREE.Group()
+    carGroup.add(doorLeftPivot)
+    carGroup.add(doorRightPivot)
+    carGroup.add(hoodPivot)
+    carGroup.add(canopyPivot)
 
     // Underglow point lights beneath the chassis
     const underglowL = new THREE.PointLight(0xc9a227, 2.5, 4.0)
@@ -611,7 +695,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
       hoodMesh.castShadow = true
       carGroup.add(hoodMesh)
       paintMeshes.push(hoodMesh)
-      hood = hoodMesh
+      hoodPivot.add(hoodMesh)
 
       // Signature G-Class Top Fender Amber Turn Signal Repeaters
       const turnL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.22), ledAmberMat)
@@ -1030,6 +1114,11 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
           model.position.y -= scaledBox.min.y
         }
 
+        const doorLeftMeshes: THREE.Object3D[] = []
+        const doorRightMeshes: THREE.Object3D[] = []
+        const hoodMeshes: THREE.Object3D[] = []
+        const canopyMeshes: THREE.Object3D[] = []
+
         model.traverse((child: any) => {
           if (child.isMesh) {
             child.castShadow = true
@@ -1046,6 +1135,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
               matName.includes('carpaint') ||
               matName.includes('lak') ||
               matName.includes('color1') ||
+              matName.includes('bd_') ||
               name.includes('body') ||
               name.includes('paint') ||
               name.includes('door') ||
@@ -1054,27 +1144,84 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
               name.includes('fender') ||
               name.includes('bumper') ||
               name.includes('roof') ||
-              name.includes('panel')
+              name.includes('panel') ||
+              name.includes('cheqi') ||
+              name.includes('main')
 
             if (isPaintable) {
               child.material = paintMaterial.clone()
               paintMeshes.push(child)
             }
 
-            if (name.includes('door') && (name.includes('l') || name.includes('left'))) {
-              doorLeft = child
+            const doorSide = classifyDoor(child.name)
+            if (doorSide === 'left') {
+              doorLeftMeshes.push(child)
+            } else if (doorSide === 'right') {
+              doorRightMeshes.push(child)
             }
-            if (name.includes('door') && (name.includes('r') || name.includes('right'))) {
-              doorRight = child
+
+            if (
+              name.includes('hood') ||
+              name.includes('bonnet') ||
+              name.includes('motorhood') ||
+              name.includes('trunk_cheqi')
+            ) {
+              hoodMeshes.push(child)
             }
-            if (name.includes('hood') || name.includes('bonnet')) {
-              hood = child
+
+            if (
+              name.includes('glass') ||
+              name.includes('windshield') ||
+              matName.includes('glass')
+            ) {
+              canopyMeshes.push(child)
             }
+
             if (name.includes('wheel') || name.includes('rim') || matName.includes('rim') || matName.includes('tire')) {
               wheels.push(child)
             }
           }
         })
+
+        // Assemble Left Door Pivot
+        if (doorLeftMeshes.length > 0) {
+          const boxL = new THREE.Box3()
+          doorLeftMeshes.forEach((m) => boxL.expandByObject(m))
+          const hingeX = boxL.max.x * 0.95
+          const hingeY = (boxL.min.y + boxL.max.y) * 0.5
+          const hingeZ = boxL.max.z * 0.8
+          doorLeftPivot.position.set(hingeX, hingeY, hingeZ)
+          doorLeftMeshes.forEach((m) => doorLeftPivot.attach(m))
+        }
+
+        // Assemble Right Door Pivot
+        if (doorRightMeshes.length > 0) {
+          const boxR = new THREE.Box3()
+          doorRightMeshes.forEach((m) => boxR.expandByObject(m))
+          const hingeX = boxR.min.x * 0.95
+          const hingeY = (boxR.min.y + boxR.max.y) * 0.5
+          const hingeZ = boxR.max.z * 0.8
+          doorRightPivot.position.set(hingeX, hingeY, hingeZ)
+          doorRightMeshes.forEach((m) => doorRightPivot.attach(m))
+        }
+
+        // Assemble Hood Pivot
+        if (hoodMeshes.length > 0) {
+          const boxH = new THREE.Box3()
+          hoodMeshes.forEach((m) => boxH.expandByObject(m))
+          const hingeZ = boxH.min.z + 0.1
+          const hingeY = boxH.max.y * 0.95
+          hoodPivot.position.set(0, hingeY, hingeZ)
+          hoodMeshes.forEach((m) => hoodPivot.attach(m))
+        }
+
+        // Assemble Canopy Pivot if no door meshes present
+        if (doorLeftMeshes.length === 0 && canopyMeshes.length > 0) {
+          const boxC = new THREE.Box3()
+          canopyMeshes.forEach((m) => boxC.expandByObject(m))
+          canopyPivot.position.set(0, (boxC.min.y + boxC.max.y) * 0.5, boxC.min.z)
+          canopyMeshes.forEach((m) => canopyPivot.attach(m))
+        }
 
         carGroup.add(model)
         setLoading(false)
@@ -1101,9 +1248,11 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
       controls,
       carGroup,
       paintMeshes,
-      doorLeft,
-      doorRight,
-      hood,
+      doorLeftPivot,
+      doorRightPivot,
+      hoodPivot,
+      canopyPivot,
+      rimLight,
       wheels,
       headlightSpots,
       underglowLights,
@@ -1113,6 +1262,8 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
       targetCamPos: null,
       targetCamLookAt: null,
       wireframeMaterials: new Map(),
+      currentDoorAnim: 0,
+      currentHoodAnim: 0,
     }
 
     // -------------------------------------------------------------------------
@@ -1140,12 +1291,46 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
       }
 
       // Turntable auto-rotate
-      if (autoRotate && ref.carGroup) {
+      if (autoRotateRef.current && ref.carGroup) {
         ref.carGroup.rotation.y += 0.005
       }
 
+      // Smooth mechanical animation lerp
+      const targetDoor = doorsOpenRef.current ? 1.0 : 0.0
+      ref.currentDoorAnim = THREE.MathUtils.lerp(ref.currentDoorAnim, targetDoor, 0.07)
+
+      const targetHood = hoodOpenRef.current ? 1.0 : 0.0
+      ref.currentHoodAnim = THREE.MathUtils.lerp(ref.currentHoodAnim, targetHood, 0.07)
+
+      if (ref.doorLeftPivot && ref.doorLeftPivot.children.length > 0) {
+        if (isSupercar) {
+          ref.doorLeftPivot.rotation.z = ref.currentDoorAnim * 0.95
+          ref.doorLeftPivot.rotation.x = ref.currentDoorAnim * 0.30
+        } else {
+          ref.doorLeftPivot.rotation.y = ref.currentDoorAnim * 0.85
+        }
+      }
+
+      if (ref.doorRightPivot && ref.doorRightPivot.children.length > 0) {
+        if (isSupercar) {
+          ref.doorRightPivot.rotation.z = -ref.currentDoorAnim * 0.95
+          ref.doorRightPivot.rotation.x = ref.currentDoorAnim * 0.30
+        } else {
+          ref.doorRightPivot.rotation.y = -ref.currentDoorAnim * 0.85
+        }
+      }
+
+      if (ref.hoodPivot && ref.hoodPivot.children.length > 0) {
+        ref.hoodPivot.rotation.x = -ref.currentHoodAnim * 0.75
+      }
+
+      if (ref.canopyPivot && ref.canopyPivot.children.length > 0) {
+        ref.canopyPivot.position.y = ref.currentDoorAnim * 0.35
+        ref.canopyPivot.rotation.x = ref.currentDoorAnim * 0.20
+      }
+
       // Engine rumble vibration & exhaust flame flicker
-      if (engineRunning) {
+      if (engineRunningRef.current) {
         angle += 0.4
         ref.carGroup.position.y = Math.sin(angle) * 0.008
         ref.exhaustFlames.forEach((flame) => {
@@ -1175,6 +1360,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      stopEngineSound()
       if (threeRef.current) {
         cancelAnimationFrame(threeRef.current.animFrame)
         renderer.dispose()
@@ -1203,7 +1389,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
   }
 
   // ---------------------------------------------------------------------------
-  // Camera Preset Navigation & TopView MCP
+  // Camera Preset Navigation & Top Aero Blueprint Telemetry
   // ---------------------------------------------------------------------------
   const handleCameraPreset = (preset: CameraPreset) => {
     setActiveCameraPreset(preset.id)
@@ -1241,24 +1427,31 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
       threeRef.current.scene.fog.color = new THREE.Color(theme.bg)
     }
     ;(threeRef.current.floorMesh.material as THREE.MeshStandardMaterial).color.set(theme.floorColor)
+    if (threeRef.current.rimLight) {
+      threeRef.current.rimLight.color.set(theme.rimColor)
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Animated Doors & Hood Toggle
+  // Animated Doors, Hood & Engine Toggle
   // ---------------------------------------------------------------------------
   const handleToggleDoors = () => {
     const nextState = !doorsOpen
     setDoorsOpen(nextState)
     if (!threeRef.current) return
 
-    const { doorLeft, doorRight } = threeRef.current
-    if (doorLeft) {
-      doorLeft.rotation.z = nextState ? 0.95 : 0
-      doorLeft.rotation.x = nextState ? 0.35 : 0
-    }
-    if (doorRight) {
-      doorRight.rotation.z = nextState ? -0.95 : 0
-      doorRight.rotation.x = nextState ? 0.35 : 0
+    // If model has no separate door meshes, glide camera to Cockpit Driver perspective for interior reveal
+    if (
+      (!threeRef.current.doorLeftPivot || threeRef.current.doorLeftPivot.children.length === 0) &&
+      (!threeRef.current.doorRightPivot || threeRef.current.doorRightPivot.children.length === 0)
+    ) {
+      if (nextState) {
+        threeRef.current.targetCamPos = new THREE.Vector3(1.8, 1.25, 0.9)
+        threeRef.current.targetCamLookAt = new THREE.Vector3(0, 0.65, 0.1)
+      } else {
+        threeRef.current.targetCamPos = CAMERA_PRESETS[0].pos.clone()
+        threeRef.current.targetCamLookAt = CAMERA_PRESETS[0].target.clone()
+      }
     }
   }
 
@@ -1267,9 +1460,33 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     setHoodOpen(nextState)
     if (!threeRef.current) return
 
-    const { hood } = threeRef.current
-    if (hood) {
-      hood.rotation.x = nextState ? -0.85 : 0
+    if (!threeRef.current.hoodPivot || threeRef.current.hoodPivot.children.length === 0) {
+      if (nextState) {
+        threeRef.current.targetCamPos = new THREE.Vector3(0, 1.6, isSupercar ? -3.4 : 3.6)
+        threeRef.current.targetCamLookAt = new THREE.Vector3(0, 0.65, isSupercar ? -1.0 : 1.0)
+      } else {
+        threeRef.current.targetCamPos = CAMERA_PRESETS[0].pos.clone()
+        threeRef.current.targetCamLookAt = CAMERA_PRESETS[0].target.clone()
+      }
+    }
+  }
+
+  const handleToggleEngine = () => {
+    const nextState = !engineRunning
+    setEngineRunning(nextState)
+    if (nextState) {
+      const vObj = vehicle || ({
+        make,
+        model: displayName,
+        engine: specs.engine,
+      } as Vehicle)
+      playVehicleEngineSound(vObj, (running: boolean) => {
+        if (!running) {
+          setEngineRunning(false)
+        }
+      })
+    } else {
+      stopEngineSound()
     }
   }
 
@@ -1375,7 +1592,17 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     setPartsLoading(true)
     fetch(`${API_BASE_URL}/parts?category=${hs.category}&limit=4`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setHotspotParts(d?.data || []))
+      .then(async (d) => {
+        let parts = d?.data || []
+        if (parts.length === 0) {
+          const fallbackRes = await fetch(`${API_BASE_URL}/parts?limit=4`).catch(() => null)
+          if (fallbackRes?.ok) {
+            const fallbackData = await fallbackRes.json()
+            parts = fallbackData?.data || []
+          }
+        }
+        setHotspotParts(parts)
+      })
       .catch(() => setHotspotParts([]))
       .finally(() => setPartsLoading(false))
   }
@@ -1399,13 +1626,13 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
             Inspect {displayName}
           </h2>
           <p className="text-[11px] font-mono text-white/50 mt-0.5">
-            Drag to orbit · scroll to zoom · use TopView MCP for CAD blueprint telemetry
+            Drag to orbit · scroll to zoom · use Aero Blueprint for CAD telemetry
           </p>
         </div>
 
-        {/* Top Center-Right: Mode Control Panel (MCP) */}
+        {/* Top Center-Right: Mode & View Controls */}
         <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
-          {/* MCP Preset Bar */}
+          {/* View Preset Bar */}
           <div className="flex items-center gap-1 p-1 rounded-2xl bg-black/80 backdrop-blur-2xl border border-white/15 shadow-2xl">
             <button
               onClick={() => handleCameraPreset(CAMERA_PRESETS.find((p) => p.id === 'top')!)}
@@ -1414,10 +1641,10 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
                   ? 'bg-[#C9A227] text-black shadow-[0_0_15px_rgba(201,162,39,0.6)]'
                   : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
-              title="Activate Overhead CAD Blueprint Mode Control Panel"
+              title="Activate Overhead CAD Blueprint Telemetry"
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>TOP VIEW MCP</span>
+              <span>AERO BLUEPRINT</span>
               {activeCameraPreset === 'top' && (
                 <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
               )}
@@ -1498,7 +1725,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
         className="w-full h-[600px] sm:h-[700px] cursor-grab active:cursor-grabbing"
       />
 
-      {/* ── TopView MCP Engineering Blueprint HUD Overlay ────────────── */}
+      {/* ── Top Aero Blueprint Engineering Blueprint HUD Overlay ────────────── */}
       {topViewBlueprint && (
         <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-6 sm:p-8">
           
@@ -1508,7 +1735,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
               <div className="w-2.5 h-2.5 rounded-full bg-[#C9A227] animate-ping" />
               <div>
                 <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#C9A227] block">
-                  Top-Down CAD Engineering MCP
+                  Top-Down CAD Engineering Blueprint
                 </span>
                 <span className="text-xs font-mono text-white/80">
                   Orthographic Blueprint • Scale 1:1 Telemetry
@@ -1730,7 +1957,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
           </div>
 
           <button
-            onClick={() => setEngineRunning(!engineRunning)}
+            onClick={handleToggleEngine}
             className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-mono font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
               engineRunning
                 ? 'bg-red-500 text-white border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse'
@@ -1778,7 +2005,7 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
           <span className="text-[10px] font-mono uppercase tracking-widest text-[#C9A227] font-bold block mb-2">
             Inspect & Shop Parts
           </span>
-          {DEFAULT_HOTSPOTS_3D.map((hs) => (
+          {activeHotspots.map((hs) => (
             <button
               key={hs.id}
               onClick={() => handleSelectHotspot(hs)}
@@ -1872,10 +2099,12 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
                 >
                   <div className="min-w-0 pr-2">
                     <p className="text-xs text-white truncate font-medium">{part.name}</p>
-                    <p className="text-[10px] text-white/50 font-mono">${part.price.toLocaleString()}</p>
+                    <p className="text-[10px] text-white/50 font-mono">
+                      {part.currency || 'AED'} {Number(part.price).toLocaleString()}
+                    </p>
                   </div>
                   <Link
-                    href={`/parts/${part.id}`}
+                    href={`/parts/${part.slug}`}
                     className="px-2.5 py-1 rounded-md bg-[#C9A227] text-black text-[10px] font-mono font-bold uppercase hover:bg-white transition-colors shrink-0"
                   >
                     View

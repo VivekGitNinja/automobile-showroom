@@ -14,15 +14,6 @@ const nextConfig = {
       },
     ],
   },
-  async rewrites() {
-    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') || 'http://localhost:4000'
-    return [
-      {
-        source: '/uploads/:path*',
-        destination: `${apiUrl}/uploads/:path*`,
-      },
-    ]
-  },
 }
 
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN) {
