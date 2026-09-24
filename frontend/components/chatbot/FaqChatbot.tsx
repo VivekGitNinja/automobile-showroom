@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { MessageSquare, X, Send, Phone, RefreshCw, ShieldCheck, ChevronRight, User, Sparkles, Calendar, ArrowUpRight, Crown, GripVertical } from 'lucide-react'
 import BookingModal from '../BookingModal'
 import CallbackModal from '../CallbackModal'
@@ -46,12 +46,14 @@ export default function FaqChatbot() {
   const [faqs, setFaqs] = useState<FlatFaq[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [whatsappNumber, setWhatsappNumber] = useState(FALLBACK_WHATSAPP)
-  const [windowHeight, setWindowHeight] = useState(800)
+  const [windowDimensions, setWindowDimensions] = useState({ width: 1440, height: 900 })
+  const dragControls = useDragControls()
+  const isDraggingRef = useRef(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setWindowHeight(window.innerHeight)
-      const onResize = () => setWindowHeight(window.innerHeight)
+      setWindowDimensions({ width: window.innerWidth, height: window.innerHeight })
+      const onResize = () => setWindowDimensions({ width: window.innerWidth, height: window.innerHeight })
       window.addEventListener('resize', onResize)
       return () => window.removeEventListener('resize', onResize)
     }
@@ -256,87 +258,59 @@ export default function FaqChatbot() {
 
   return (
     <>
-      {/* ── Apple-Style Draggable Floating Concierge & WhatsApp Island Deck ── */}
+      {/* ── Apple-Style Draggable Floating Concierge Puck ── */}
       <motion.div
-        drag="y"
-        dragConstraints={{ top: -Math.max(windowHeight - 240, 200), bottom: 10 }}
-        dragElastic={0.08}
+        drag
+        dragControls={dragControls}
+        dragListener={!isOpen}
         dragMomentum={false}
-        className="fixed bottom-6 right-4 sm:right-8 z-[999] select-none touch-none"
+        dragElastic={0.08}
+        dragConstraints={{
+          left: -Math.max(windowDimensions.width - 90, 200),
+          right: 10,
+          top: -Math.max(windowDimensions.height - 110, 200),
+          bottom: 10,
+        }}
+        onDragStart={() => {
+          isDraggingRef.current = true
+        }}
+        onDragEnd={() => {
+          setTimeout(() => {
+            isDraggingRef.current = false
+          }, 150)
+        }}
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[998] select-none"
       >
-        {/* Apple Dynamic Island Capsule */}
+        {/* Apple Dynamic Floating Orb - Logo Only */}
         {!isOpen && (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-            whileHover={{ scale: 1.02 }}
-            whileDrag={{ scale: 1.04, cursor: 'grabbing' }}
-            className="relative flex items-center p-1.5 sm:p-2 rounded-full bg-[#08080a]/85 backdrop-blur-3xl border border-white/20 shadow-[0_16px_45px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.25)] ring-1 ring-white/10 group cursor-grab active:cursor-grabbing"
-          >
-            {/* Apple Drag Grip Indicator */}
-            <div
-              className="flex items-center justify-center pl-2 pr-1 text-white/30 hover:text-white/70 transition-colors cursor-grab active:cursor-grabbing"
-              title="Drag up or down to reposition"
-            >
-              <GripVertical className="w-3.5 h-3.5" />
+          <div className="relative group">
+            {/* Apple Hover Tooltip */}
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/90 backdrop-blur-md border border-white/20 text-[10px] font-mono tracking-widest text-[#C9A227] uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl">
+              VIP Concierge
             </div>
 
-            {/* Segment 1: VIP Concierge Live Assistant */}
-            <button
+            <motion.button
               type="button"
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                if (!isDraggingRef.current) {
+                  setIsOpen(true)
+                }
+              }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.94 }}
+              whileDrag={{ scale: 1.15, cursor: 'grabbing' }}
               aria-label="Open VIP Concierge Live Assistant"
-              className="flex items-center gap-2.5 sm:gap-3 py-2 px-3 sm:px-4 rounded-full hover:bg-white/[0.08] transition-all duration-200 text-left"
+              className="relative w-14 h-14 sm:w-15 sm:h-15 rounded-full bg-[#08080a]/85 backdrop-blur-3xl border border-white/20 shadow-[0_12px_36px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.25)] ring-1 ring-white/10 flex items-center justify-center cursor-grab active:cursor-grabbing hover:border-[#C9A227]/40 hover:shadow-[0_0_25px_rgba(201,162,39,0.35)] transition-all duration-300"
             >
-              <div className="relative flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#A68019] via-[#C9A227] to-[#F3D77B] text-black flex items-center justify-center shadow-[0_2px_10px_rgba(201,162,39,0.35)]">
-                  <Crown className="w-4 h-4 text-black drop-shadow-sm" />
-                </div>
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-black animate-pulse" />
+              {/* Inner Metallic Gold Crown Orb */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#9E7D1A] via-[#C9A227] to-[#F5DE88] text-black flex items-center justify-center shadow-[0_2px_12px_rgba(201,162,39,0.4)]">
+                <Crown className="w-5 h-5 text-black drop-shadow-sm" />
               </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] font-mono font-bold tracking-widest text-[#C9A227] uppercase flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" /> Concierge
-                </span>
-                <span className="text-xs font-semibold text-white tracking-tight">Live Assistant</span>
-              </div>
-            </button>
 
-            {/* Apple Hairline Divider */}
-            <div className="w-[1px] h-6 bg-white/15 my-auto" />
-
-            {/* Segment 2: WhatsApp VIP Desk */}
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Connect with VIP Concierge on WhatsApp"
-              className="flex items-center gap-2.5 sm:gap-3 py-2 px-3 sm:px-4 rounded-full hover:bg-white/[0.08] transition-all duration-200 text-left"
-            >
-              <div className="relative flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-[#25D366] text-black flex items-center justify-center shadow-[0_2px_10px_rgba(37,211,102,0.35)]">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    viewBox="0 0 16 16"
-                    className="text-black"
-                  >
-                    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.622 2.94-6.592 6.592-6.592a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
-                  </svg>
-                </div>
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#25D366] border-2 border-black animate-pulse" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] font-mono font-bold tracking-widest text-emerald-400 uppercase">
-                  WhatsApp
-                </span>
-                <span className="text-xs font-semibold text-white tracking-tight">Direct Desk</span>
-              </div>
-            </a>
-          </motion.div>
+              {/* Micro Status Beacon */}
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#08080a] animate-pulse" />
+            </motion.button>
+          </div>
         )}
 
         {/* Chatbot Window */}
@@ -353,22 +327,29 @@ export default function FaqChatbot() {
               className="relative w-[370px] max-w-[calc(100vw-2rem)] sm:w-[440px] h-[620px] max-h-[calc(100vh-6rem)] rounded-[32px] bg-[#08080a]/90 backdrop-blur-3xl border border-white/20 shadow-[0_24px_70px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.2)] flex flex-col overflow-hidden text-xs"
             >
               {/* iOS Drag Handle on top of open modal */}
-              <div className="pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing" title="Drag up or down to reposition">
-                <div className="w-10 h-1 rounded-full bg-white/25 hover:bg-white/50 transition-colors" />
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing select-none touch-none"
+                title="Drag to reposition window"
+              >
+                <div className="w-10 h-1.5 rounded-full bg-white/25 hover:bg-white/50 transition-colors" />
               </div>
 
               {/* Header */}
-              <div className="px-5 py-3.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border border-[#C9A227]/40 flex items-center justify-center bg-[#C9A227]/10 shadow-[0_2px_12px_rgba(201,162,39,0.25)]">
-                    <Crown className="w-5 h-5 text-[#C9A227]" />
+              <div className="px-5 py-3 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                <div
+                  onPointerDown={(e) => dragControls.start(e)}
+                  className="flex items-center gap-3 cursor-grab active:cursor-grabbing select-none flex-1"
+                >
+                  <div className="w-9 h-9 rounded-full border border-[#C9A227]/40 flex items-center justify-center bg-[#C9A227]/10 shadow-[0_2px_12px_rgba(201,162,39,0.25)]">
+                    <Crown className="w-4 h-4 text-[#C9A227]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-serif font-bold text-white text-base tracking-wide">Apex VIP Concierge</h4>
+                      <h4 className="font-serif font-bold text-white text-sm tracking-wide">Apex VIP Concierge</h4>
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
-                    <span className="text-[10px] text-white/50 font-mono uppercase tracking-widest block">
+                    <span className="text-[9px] text-white/50 font-mono uppercase tracking-widest block">
                       Dubai Showroom · Private Desk
                     </span>
                   </div>
