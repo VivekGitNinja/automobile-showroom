@@ -238,6 +238,54 @@ export default function AddVehicleModal({ isOpen, onClose, onSuccess }: AddVehic
             />
           </div>
 
+          {/* 3D Virtual Studio Configuration */}
+          <div className="space-y-4 p-5 rounded-2xl bg-black/50 border border-gold/20">
+            <div className="flex items-center justify-between border-b border-dark-border pb-2">
+              <h3 className="text-gold font-mono uppercase tracking-widest text-xs flex items-center gap-2">
+                <span>Interactive 3D Virtual Studio Configuration</span>
+              </h3>
+              <span className="text-[10px] font-mono text-gray-400">WebGL & Holographic X-Ray</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">
+                  3D Digital Twin Archetype
+                </label>
+                <select
+                  value={archetype3d}
+                  onChange={(e) => setArchetype3d(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-dark-card border border-dark-border text-white text-xs focus:border-gold focus:outline-none"
+                >
+                  <option value="auto">✨ Auto Detect (Smart Heuristics)</option>
+                  <option value="supercar">🏎️ Supercar / Hypercar Twin</option>
+                  <option value="suv">🚙 Luxury High-Stance 4x4 SUV Twin</option>
+                  <option value="sedan">🚘 Executive Stately Saloon Twin</option>
+                  <option value="coupe">🏎️ GT Aerodynamic Sports Coupe Twin</option>
+                  <option value="mclaren">🏁 British Grand Tourer / McLaren Twin</option>
+                  <option value="mercedes">✨ Luxury Grand Roadster / GT Twin</option>
+                </select>
+                <span className="text-[10px] text-gray-500 mt-1 block">
+                  Selects the base 3D chassis if no custom GLB file is specified.
+                </span>
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">
+                  Custom 3D Model File (.glb) URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. /models/custom-car.glb or https://..."
+                  value={model3dUrl}
+                  onChange={(e) => setModel3dUrl(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-dark-card border border-dark-border text-white text-xs focus:border-gold focus:outline-none placeholder-white/20"
+                />
+                <span className="text-[10px] text-gray-500 mt-1 block">
+                  Optional. Direct link to a dedicated 3D GLB digital twin.
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Specs JSON Builder */}
           <div className="space-y-4">
             <div className="flex justify-between items-center border-b border-dark-border pb-2">

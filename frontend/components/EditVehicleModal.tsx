@@ -229,8 +229,10 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
                   <option value="auto">Auto-Detect (from Make / Model / Body Type)</option>
                   <option value="suv">Luxury SUV & 4x4 Off-Road (G-Class, Urus, Cullinan)</option>
                   <option value="supercar">Exotic Supercar / Hypercar (Aventador, Ferrari, GT)</option>
-                  <option value="sedan">Executive Stately Saloon (Rolls-Royce, Maybach)</option>
-                  <option value="coupe">Grand Tourer Coupe (Porsche 911, Aston Martin)</option>
+                  <option value="sedan">Executive Stately Saloon (Rolls-Royce, Maybach, Bentley)</option>
+                  <option value="coupe">Grand Tourer Coupe (Porsche 911, GT3)</option>
+                  <option value="mclaren">British Grand Tourer / McLaren (Aston Martin DBS)</option>
+                  <option value="mercedes">Luxury Grand Roadster / GT (Mercedes-AMG SL)</option>
                 </select>
               </div>
 

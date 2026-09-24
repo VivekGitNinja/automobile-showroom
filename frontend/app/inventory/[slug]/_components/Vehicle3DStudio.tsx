@@ -171,6 +171,14 @@ export function resolveVehicleModelUrl(vehicle?: Vehicle): string {
   const explicit = vehicle?.model3dUrl || (vehicle?.specsJson as any)?.model3dUrl
   if (explicit) return explicit
 
+  const explicitArchetype = ((vehicle?.specsJson as any)?.archetype3d || '').toLowerCase()
+  if (explicitArchetype === 'suv') return '/models/suv.glb'
+  if (explicitArchetype === 'sedan') return '/models/sedan.glb'
+  if (explicitArchetype === 'coupe') return '/models/coupe.glb'
+  if (explicitArchetype === 'mclaren') return '/models/mclaren.glb'
+  if (explicitArchetype === 'mercedes') return '/models/mercedes.glb'
+  if (explicitArchetype === 'supercar') return '/models/CarConcept.glb'
+
   const slug = (vehicle?.slug || '').toLowerCase()
   const make = (vehicle?.make || '').toLowerCase()
   const model = (vehicle?.model || '').toLowerCase()
