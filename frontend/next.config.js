@@ -14,6 +14,45 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/marques',
+        destination: '/brands',
+        permanent: true,
+      },
+      {
+        source: '/marques/:slug*',
+        destination: '/brands/:slug*',
+        permanent: true,
+      },
+      {
+        source: '/sell-car',
+        destination: '/sell-your-car',
+        permanent: true,
+      },
+      {
+        source: '/vehicles',
+        destination: '/inventory',
+        permanent: true,
+      },
+      {
+        source: '/vehicle/:slug*',
+        destination: '/inventory/:slug*',
+        permanent: true,
+      },
+      {
+        source: '/cars',
+        destination: '/inventory',
+        permanent: true,
+      },
+      {
+        source: '/car/:slug*',
+        destination: '/inventory/:slug*',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN) {
