@@ -1,10 +1,10 @@
 import { Worker } from 'bullmq'
 import { prisma } from '../config/database'
-import { redisClient } from '../config/redis'
+import { redisClient, redisConnectionOptions } from '../config/redis'
 import { logger } from '../utils/logger'
 import { googleSheetsService } from '../services/googleSheets.service'
 
-const connection = { host: redisClient.options.host, port: redisClient.options.port }
+const connection = redisConnectionOptions
 
 const syncWorker = new Worker('sync', async (job) => {
   logger.info(`Processing sync job ${job.id}`)

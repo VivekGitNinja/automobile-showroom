@@ -14,4 +14,12 @@ redisClient.on('error', (err) => {
   }
 })
 
+export const redisConnectionOptions = {
+  host: redisClient.options.host,
+  port: redisClient.options.port,
+  password: redisClient.options.password,
+  username: redisClient.options.username,
+  tls: redisClient.options.tls,
+}
+
 export default redisClient

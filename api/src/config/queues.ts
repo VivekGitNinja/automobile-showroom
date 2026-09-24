@@ -1,7 +1,7 @@
 import { Queue } from 'bullmq'
-import { redisClient } from './redis'
+import { redisConnectionOptions } from './redis'
 
-const connection = { host: redisClient.options.host, port: redisClient.options.port }
+const connection = redisConnectionOptions
 
 export const syncQueue = new Queue('sync', {
   connection,

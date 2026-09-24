@@ -1,10 +1,10 @@
 import { Worker } from 'bullmq'
 import { prisma } from '../config/database'
-import { redisClient } from '../config/redis'
+import { redisClient, redisConnectionOptions } from '../config/redis'
 import sgMail from '@sendgrid/mail'
 import { logger } from '../utils/logger'
 
-const connection = { host: redisClient.options.host, port: redisClient.options.port }
+const connection = redisConnectionOptions
 
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY)

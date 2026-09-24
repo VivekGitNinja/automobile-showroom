@@ -1,10 +1,10 @@
 import { Queue, Worker } from 'bullmq'
-import { redisClient } from './redis'
+import { redisConnectionOptions } from './redis'
 import sgMail from '@sendgrid/mail'
 import { logger } from '../utils/logger'
 import { prisma } from './database'
 
-const connection = { host: redisClient.options.host, port: redisClient.options.port }
+const connection = redisConnectionOptions
 
 // Initialize SendGrid
 if (process.env.SENDGRID_API_KEY) {
