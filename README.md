@@ -184,7 +184,7 @@ node scratch/verify_3d_overhaul_live.js
 - **Flagship Location:** Sheikh Zayed Road, Al Quoz Industrial 3, Dubai, UAE
 - **VIP Desk:** `+971 50 891 9441`
 - **Email:** `sales@showroom.ae`
-- **Technical Inquiries:** TechZoetic Solutions — [www.techzoetic.com](https://www.techzoetic.com)
+- **Technical Inquiries:** TechXoetic Solutions — [techxoetic.com](https://techxoetic.com/)
 
 ---
 
