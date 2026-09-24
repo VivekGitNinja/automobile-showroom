@@ -55,6 +55,7 @@ ESAD_Document/
 # Playwright artifacts
 frontend/test-results/
 frontend/playwright-report/
+scratch/
 
 # Coverage output
 api/coverage/

@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import {
   Loader2,
   RotateCcw,
@@ -164,6 +165,72 @@ export function detectArchetype(vehicle?: Vehicle): VehicleArchetype {
   }
 
   return 'supercar'
+}
+
+export function resolveVehicleModelUrl(vehicle?: Vehicle): string {
+  const explicit = vehicle?.model3dUrl || (vehicle?.specsJson as any)?.model3dUrl
+  if (explicit) return explicit
+
+  const slug = (vehicle?.slug || '').toLowerCase()
+  const make = (vehicle?.make || '').toLowerCase()
+  const model = (vehicle?.model || '').toLowerCase()
+  const body = (vehicle?.bodyType || (vehicle?.specsJson as any)?.bodyType || '').toLowerCase()
+
+  // 1. Ferrari SF90 Stradale & Italian Thoroughbreds
+  if (make.includes('ferrari') || model.includes('sf90') || slug.includes('ferrari')) {
+    return '/models/ferrari.glb'
+  }
+
+  // 2. Lamborghini Aventador SVJ & Flagship Hypercars
+  if (model.includes('aventador') || model.includes('huracan') || model.includes('revuelto') || slug.includes('aventador')) {
+    return '/models/CarConcept.glb'
+  }
+
+  // 3. Aston Martin DBS Superleggera & British GT / McLaren
+  if (make.includes('aston') || model.includes('dbs') || model.includes('vantage') || make.includes('mclaren')) {
+    return '/models/mclaren.glb'
+  }
+
+  // 4. Porsche 911 GT3 / Sport Coupes
+  if (make.includes('porsche') || model.includes('911') || model.includes('gt3') || slug.includes('porsche')) {
+    return '/models/coupe.glb'
+  }
+
+  // 5. Luxury SUVs (Mercedes-Benz G-Class, Lamborghini Urus, Range Rover, Cullinan)
+  if (
+    body.includes('suv') ||
+    body.includes('4x4') ||
+    model.includes('g-class') ||
+    model.includes('g63') ||
+    model.includes('g 63') ||
+    model.includes('urus') ||
+    model.includes('cullinan') ||
+    model.includes('defender') ||
+    model.includes('range rover')
+  ) {
+    return '/models/suv.glb'
+  }
+
+  // 6. Stately Luxury Sedans (Rolls-Royce Phantom, Ghost, Maybach, Flying Spur)
+  if (
+    body.includes('sedan') ||
+    body.includes('saloon') ||
+    body.includes('limousine') ||
+    make.includes('rolls') ||
+    model.includes('phantom') ||
+    model.includes('ghost') ||
+    model.includes('maybach')
+  ) {
+    return '/models/sedan.glb'
+  }
+
+  // 7. Mercedes-Benz Grand Roadster / GT
+  if (make.includes('mercedes') || make.includes('benz')) {
+    return '/models/mercedes.glb'
+  }
+
+  // Default fallback to high-poly concept
+  return '/models/CarConcept.glb'
 }
 
 interface ArchetypeCADSpecs {
@@ -916,81 +983,107 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     }
 
     // -------------------------------------------------------------------------
-    // Model Resolution: Check for GLB or route to authentic archetype
+    // Model Resolution: Load authentic 3D GLB digital twin for this specific car
     // -------------------------------------------------------------------------
-    const explicitGlb = vehicle?.model3dUrl || (vehicle?.specsJson as any)?.model3dUrl
+    const glbTarget = resolveVehicleModelUrl(vehicle)
+    setLoadingText(`Streaming authentic 3D digital twin for ${displayName}...`)
 
-    if (archetype === 'suv') {
-      // For SUV (G-Class, Urus, Cullinan), render our authentic luxury SUV model
-      buildSUVVehicleSculpt()
-    } else if (archetype === 'sedan') {
-      buildSedanVehicleSculpt()
-    } else if (archetype === 'coupe') {
-      buildCoupeVehicleSculpt()
-    } else {
-      // Supercar / Hypercar: try high-poly GLB with DRACOLoader
-      const glbTarget = explicitGlb || '/models/CarConcept.glb'
-      setLoadingText('Streaming high-fidelity 3D vehicle model...')
+    const loader = new GLTFLoader()
+    const dracoLoader = new DRACOLoader()
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    loader.setDRACOLoader(dracoLoader)
+    loader.setMeshoptDecoder(MeshoptDecoder)
 
-      const loader = new GLTFLoader()
-      const dracoLoader = new DRACOLoader()
-      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
-      loader.setDRACOLoader(dracoLoader)
+    loader.load(
+      glbTarget,
+      (gltf) => {
+        setModelType('glb-real')
+        const model = gltf.scene
 
-      loader.load(
-        glbTarget,
-        (gltf) => {
-          setModelType('glb-real')
-          const model = gltf.scene
-          model.scale.set(1.1, 1.1, 1.1)
-          model.position.set(0, 0, 0)
+        // Auto-center and normalize scale across all different 3D models
+        const box = new THREE.Box3().setFromObject(model)
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
 
-          model.traverse((child: any) => {
-            if (child.isMesh) {
-              child.castShadow = true
-              child.receiveShadow = true
+        // Re-center object at local origin
+        model.position.x = -center.x
+        model.position.z = -center.z
+        model.position.y = -box.min.y // place directly on turntable floor
 
-              const name = (child.name || '').toLowerCase()
-              if (
-                name.includes('body') ||
-                name.includes('door') ||
-                name.includes('hood') ||
-                name.includes('panel') ||
-                name.includes('color1')
-              ) {
-                child.material = paintMaterial
-                paintMeshes.push(child)
-              }
+        // Scale normalization: luxury cars are ~4.5m - 5.0m in length
+        const maxLen = Math.max(size.x, size.z)
+        if (maxLen > 0) {
+          const targetLength = archetype === 'suv' || archetype === 'sedan' ? 4.9 : 4.6
+          const scaleMultiplier = targetLength / maxLen
+          model.scale.multiplyScalar(scaleMultiplier)
+
+          // Readjust ground level after scaling
+          const scaledBox = new THREE.Box3().setFromObject(model)
+          model.position.y -= scaledBox.min.y
+        }
+
+        model.traverse((child: any) => {
+          if (child.isMesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+
+            const name = (child.name || '').toLowerCase()
+            const matName = (Array.isArray(child.material)
+              ? child.material.map((m: any) => m.name).join(' ')
+              : (child.material?.name || '')).toLowerCase()
+
+            const isPaintable =
+              matName.includes('paint') ||
+              matName.includes('body') ||
+              matName.includes('carpaint') ||
+              matName.includes('lak') ||
+              matName.includes('color1') ||
+              name.includes('body') ||
+              name.includes('paint') ||
+              name.includes('door') ||
+              name.includes('hood') ||
+              name.includes('bonnet') ||
+              name.includes('fender') ||
+              name.includes('bumper') ||
+              name.includes('roof') ||
+              name.includes('panel')
+
+            if (isPaintable) {
+              child.material = paintMaterial.clone()
+              paintMeshes.push(child)
             }
 
-            if (child.name === 'BodyDoorLColor1' || child.name.includes('DoorL') || child.name.includes('Door_L')) {
+            if (name.includes('door') && (name.includes('l') || name.includes('left'))) {
               doorLeft = child
             }
-            if (child.name === 'BodyDoorRColor1' || child.name.includes('DoorR') || child.name.includes('Door_R')) {
+            if (name.includes('door') && (name.includes('r') || name.includes('right'))) {
               doorRight = child
             }
-            if (child.name === 'BodyHood' || child.name.includes('Hood') || child.name.includes('Bonnet')) {
+            if (name.includes('hood') || name.includes('bonnet')) {
               hood = child
             }
-            if (child.name.includes('Wheel') || child.name.includes('wheel')) {
+            if (name.includes('wheel') || name.includes('rim') || matName.includes('rim') || matName.includes('tire')) {
               wheels.push(child)
             }
-          })
-
-          carGroup.add(model)
-          setLoading(false)
-        },
-        (xhr) => {
-          if (xhr.lengthComputable) {
-            setLoadingProgress(Math.round((xhr.loaded / xhr.total) * 100))
           }
-        },
-        (err) => {
-          console.warn('GLB load error, falling back to supercar sculpt:', err)
-          buildSupercarVehicleSculpt()
+        })
+
+        carGroup.add(model)
+        setLoading(false)
+      },
+      (xhr) => {
+        if (xhr.lengthComputable) {
+          setLoadingProgress(Math.round((xhr.loaded / xhr.total) * 100))
         }
-      )
-    }
+      },
+      (err) => {
+        console.warn('GLB load error, falling back to procedural digital twin:', err)
+        if (archetype === 'suv') buildSUVVehicleSculpt()
+        else if (archetype === 'sedan') buildSedanVehicleSculpt()
+        else if (archetype === 'coupe') buildCoupeVehicleSculpt()
+        else buildSupercarVehicleSculpt()
+      }
+    )
 
     // Store state in ref
     threeRef.current = {
@@ -1180,20 +1273,68 @@ export default function Vehicle3DStudio({ vehicle, vehicleName }: Vehicle3DStudi
     setWireframeMode(next)
     if (!threeRef.current) return
 
-    threeRef.current.paintMeshes.forEach((mesh) => {
-      if (next) {
-        threeRef.current?.wireframeMaterials.set(mesh, mesh.material)
-        mesh.material = new THREE.MeshBasicMaterial({
-          color: 0x00f0ff,
-          wireframe: true,
-          transparent: true,
-          opacity: 0.6,
-        })
-      } else {
-        const original = threeRef.current?.wireframeMaterials.get(mesh)
-        if (original) mesh.material = original
-      }
-    })
+    const ref = threeRef.current
+
+    if (next) {
+      // Traverse ALL meshes in the car for authentic full-chassis X-Ray
+      ref.carGroup.traverse((child: any) => {
+        if (child.isMesh) {
+          ref.wireframeMaterials.set(child, child.material)
+
+          const name = (child.name || '').toLowerCase()
+          const matName = (Array.isArray(child.material)
+            ? child.material.map((m: any) => m.name).join(' ')
+            : (child.material?.name || '')).toLowerCase()
+
+          const isInternal =
+            name.includes('engine') ||
+            name.includes('brake') ||
+            name.includes('caliper') ||
+            name.includes('disc') ||
+            name.includes('susp') ||
+            name.includes('steering') ||
+            name.includes('chassis') ||
+            matName.includes('mechanical') ||
+            matName.includes('brake') ||
+            matName.includes('disc') ||
+            matName.includes('caliper')
+
+          if (isInternal) {
+            // Internal mechanicals glow with high-contrast Apex Gold alloy
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0xc9a227,
+              emissive: 0xc9a227,
+              emissiveIntensity: 0.6,
+              roughness: 0.3,
+              metalness: 0.8,
+            })
+          } else {
+            // Outer body, glass, and shell become transparent cyan holographic wireframe
+            child.material = new THREE.MeshStandardMaterial({
+              color: 0x00f0ff,
+              emissive: 0x004466,
+              emissiveIntensity: 0.25,
+              wireframe: true,
+              transparent: true,
+              opacity: 0.35,
+              roughness: 0.2,
+              metalness: 0.8,
+            })
+          }
+        }
+      })
+    } else {
+      // Restore original materials on all meshes cleanly
+      ref.carGroup.traverse((child: any) => {
+        if (child.isMesh) {
+          const original = ref.wireframeMaterials.get(child)
+          if (original) {
+            child.material = original
+          }
+        }
+      })
+      ref.wireframeMaterials.clear()
+    }
   }
 
   // ---------------------------------------------------------------------------
