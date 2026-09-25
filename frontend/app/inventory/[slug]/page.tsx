@@ -104,7 +104,7 @@ export default async function VehicleDetailPage({ params }: { params: { slug: st
     offers: {
       '@type': 'Offer',
       price: vehicle.price,
-      priceCurrency: vehicle.currency || 'USD',
+      priceCurrency: vehicle.currency || 'AED',
       availability: 'https://schema.org/InStock',
       seller: {
         '@type': 'AutoDealer',

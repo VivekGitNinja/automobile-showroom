@@ -300,6 +300,7 @@ export default function FaqChatbot() {
               whileTap={{ scale: 0.94 }}
               whileDrag={{ scale: 1.15, cursor: 'grabbing' }}
               aria-label="Open VIP Concierge Live Assistant"
+              aria-haspopup="dialog"
               className="relative w-14 h-14 sm:w-15 sm:h-15 rounded-full bg-[#08080a]/85 backdrop-blur-3xl border border-white/20 shadow-[0_12px_36px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.25)] ring-1 ring-white/10 flex items-center justify-center cursor-grab active:cursor-grabbing hover:border-[#C9A227]/40 hover:shadow-[0_0_25px_rgba(201,162,39,0.35)] transition-all duration-300"
             >
               {/* Inner Metallic Gold Crown Orb */}
