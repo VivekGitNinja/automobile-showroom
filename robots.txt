@@ -1,0 +1,7 @@
+User-Agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+Host: https://vivekgitninja.github.io/automobile-showroom
+Sitemap: https://vivekgitninja.github.io/automobile-showroom/sitemap.xml
